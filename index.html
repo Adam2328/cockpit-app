@@ -471,7 +471,7 @@ function closeLayer(){layer=null;$('#layer').innerHTML=''}
 function openAdd(prefill){
   layer={type:'add',text:prefill||'',last:null};
   $('#layer').innerHTML='<div class="layer"><div class="scrim" data-act="close"></div><section class="sheet" aria-label="Nouvelle tâche"><div class="top"><span class="lbl m">Nouvelle tâche</span><button class="btn" data-act="close" aria-label="Fermer">'+ic('close')+'</button></div><div id="last"></div>'+
-   '<label class="vh" for="phrase">Décris la tâche en une phrase</label><textarea id="phrase" class="inp" rows="2" placeholder="Appeler Marc demain à 14h30 !1 #time2ai"></textarea><div id="pv"></div>'+
+   '<label class="vh" for="phrase">Tâche, en une phrase</label><textarea id="phrase" class="inp" rows="2"></textarea><div id="pv"></div><label class="fl m" for="addnote" style="margin:16px 0 6px">Note · facultatif</label><textarea id="addnote" class="note" rows="2" style="min-height:64px"></textarea>'+
    '<div class="toks" id="toks" role="group" aria-label="Raccourcis de saisie"></div><button class="btn go" id="go" data-act="addgo">'+ic('check')+'Ajouter</button></section></div>';
   var ta=$('#phrase');ta.value=layer.text;ta.oninput=function(){layer.text=ta.value;addPreview()};
   ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addGo()}};
@@ -515,7 +515,7 @@ function dateLabel(days){
 }
 function addPreview(){
   var text=layer.text,p=parsePhrase(text),PL={1:'!1 Urgent',2:'!2 Normal',3:'!3 Faible'},NF={1:'8h · 12h · 16h · 20h',2:'8h · 20h',3:'8h'};
-  $('#pv').innerHTML='<div class="pv" aria-live="polite"><div class="lb m">Compris</div><div class="pt'+(p.title?'':' ph')+'">'+esc(p.title||'Le titre apparaîtra ici')+'</div><div class="pchips">'+
+  $('#pv').innerHTML='<div class="pv" aria-live="polite"><div class="lb m">Compris</div><div class="pt">'+esc(p.title)+'</div><div class="pchips">'+
    '<span class="btn chip'+(p.days!=null?' on':'')+'">'+ic('cal','s')+esc(dateLabel(p.days)||'Date')+'</span>'+
    '<span class="btn chip'+(p.time?' on':'')+'">'+ic('bell','s')+(p.time?'Rappel '+p.time:'Rappel')+'</span>'+
    '<span class="btn chip m'+(p.prioSet?(p.prio===1?' on inv':' on'):'')+'">'+(p.prioSet?PL[p.prio]:'!2 Normal')+'</span>'+
@@ -530,10 +530,10 @@ function addPreview(){
 }
 function addGo(){
   var text=layer.text,p=parsePhrase(text);if(!p.title)return;
-  var due=p.days!=null?addDays(todayStr(),p.days):'',sp=p.space?p.space.id:(view==='spaces'&&spId?spId:'perso');
-  var id=addTask({title:p.title,space:sp,pr:p.prio,due:due,remind:p.time&&due?due+'T'+p.time:'',status:'todo',note:'',recur:'none',created:Date.now(),doneAt:0});
-  layer.text='';layer.undo={id:id,text:text};
-  $('#phrase').value='';
+  var note=$('#addnote').value.trim(),due=p.days!=null?addDays(todayStr(),p.days):'',sp=p.space?p.space.id:(view==='spaces'&&spId?spId:'perso');
+  var id=addTask({title:p.title,space:sp,pr:p.prio,due:due,remind:p.time&&due?due+'T'+p.time:'',status:'todo',note:note,recur:'none',created:Date.now(),doneAt:0});
+  layer.text='';layer.undo={id:id,text:text,note:note};
+  $('#phrase').value='';$('#addnote').value='';
   $('#last').innerHTML='<div class="last" role="status">'+ic('check','s')+'<span>Ajoutée : '+esc(p.title)+'</span><button class="btn" data-act="addundo">Annuler</button></div>';
   addPreview();$('#phrase').focus();
 }
@@ -562,7 +562,7 @@ function openEdit(id){
   var mon=addDays(T,(8-parseISO(T).getDay())%7||7);
   $('#layer').innerHTML='<div class="layer"><div class="page"><div class="pgw"><header class="ptop"><button class="btn back" data-act="close">'+ic('back')+esc({today:'Aujourd\'hui',upcoming:'À venir',spaces:'Espaces',done:'Terminées'}[view]||'Retour')+'</button><span class="saved m" id="saved">'+ic('check','s')+'Enregistré</span></header>'+
    '<form class="pbody" id="ef" onsubmit="return false"><label class="vh" for="f-title">Titre</label><textarea id="f-title" class="ftitle" rows="2">'+esc(t.title)+'</textarea>'+
-   '<span class="fl m">Espace</span><label class="field"><span class="sp" style="--h:'+hueOf(spaceOf(t.space))+';flex:1;display:flex;align-items:center;gap:10px"><i class="sq" style="width:10px;height:10px"></i><select id="f-space" aria-label="Espace">'+spaces.concat(spaces.some(function(s){return s.id===t.space})?[]:[spaceOf(t.space)]).map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===t.space?' selected':'')+'>'+esc(s.name)+'</option>'}).join('')+'</select></span>'+ic('chev')+'</label>'+
+   '<label class="fl m" for="f-note" style="margin-top:14px">Note</label><textarea id="f-note" class="note" style="min-height:72px" rows="2">'+esc(t.note||'')+'</textarea><span class="fl m">Espace</span><label class="field"><span class="sp" style="--h:'+hueOf(spaceOf(t.space))+';flex:1;display:flex;align-items:center;gap:10px"><i class="sq" style="width:10px;height:10px"></i><select id="f-space" aria-label="Espace">'+spaces.concat(spaces.some(function(s){return s.id===t.space})?[]:[spaceOf(t.space)]).map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===t.space?' selected':'')+'>'+esc(s.name)+'</option>'}).join('')+'</select></span>'+ic('chev')+'</label>'+
    '<span class="fl m">Priorité</span>'+seg('pr',[[1,'<span class="m">!1</span><small>Urgent</small>'],[2,'<span class="m">!2</span><small>Normal</small>'],[3,'<span class="m">!3</span><small>Faible</small>']],t.pr,'c3')+
    '<div class="hint m" id="nf">'+ic('bell','s')+'Notifs : '+NF[t.pr]+'</div>'+
    '<span class="fl m">Échéance</span><label class="field">'+ic('cal')+'<input type="date" id="f-due" value="'+esc(t.due||'')+'" aria-label="Échéance"></label>'+
@@ -572,7 +572,7 @@ function openEdit(id){
    '<span class="fl m">Statut</span>'+seg('st',[['todo','À faire'],['waiting','En attente'],['done','Terminé']],t.status,'c3')+
    '<div class="hint">En attente d\'un tiers ? Choisis ce statut : l\'échéance sert alors de date de relance.</div>'+
    '<span class="fl m">Récurrence</span>'+seg('rec',[['none','Jamais'],['daily','Jour'],['weekly','Semaine'],['monthly','Mois']],t.recur||'none','c4')+
-   '<label class="fl m" for="f-note">Note</label><textarea id="f-note" class="note" placeholder="Contexte, numéro, points à aborder…">'+esc(t.note||'')+'</textarea></form>'+
+   '</form>'+
    '<div class="pbar"><button class="btn del" type="button" data-act="e-del" id="e-del" aria-label="Supprimer la tâche">'+ic('trash')+'</button><button class="btn fin" type="button" data-act="e-done">'+ic('check')+'Terminer</button></div></div></div></div>';
 }
 function formVal(k){var g=document.querySelector('#ef [data-k="'+k+'"] [aria-pressed="true"]');return g?g.dataset.v:null}
@@ -641,7 +641,7 @@ document.addEventListener('click',function(e){
     case 'add':openAdd();break;
     case 'close':closeLayer();break;
     case 'addgo':addGo();break;
-    case 'addundo':if(layer&&layer.undo){var u=layer.undo;delTask(u.id);layer.text=u.text;layer.undo=null;$('#phrase').value=u.text;$('#last').innerHTML='';addPreview()}break;
+    case 'addundo':if(layer&&layer.undo){var u=layer.undo;delTask(u.id);layer.text=u.text;layer.undo=null;$('#phrase').value=u.text;$('#addnote').value=u.note;$('#last').innerHTML='';addPreview()}break;
     case 'a-done':if(layer){var x=tasks.get(layer.id);closeLayer();if(x)complete(x)}break;
     case 'a-snooze':if(layer){var y=tasks.get(layer.id);closeLayer();if(y)snooze(y)}break;
     case 'a-edit':if(layer){var z=layer.id;closeLayer();openEdit(z)}break;
