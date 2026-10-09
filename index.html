@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2F4BD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cockpit">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Cockpit de Harry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: espaces en colonne à gauche (onglets défilants sur mobile), liste groupée par urgence à droite. */
+:root{
+  --bg:#F1F4F8; --surface:#FFFFFF; --ink:#142030; --muted:#566678; --line:#DCE3EB; --hover:#EAEFF5;
+  --accent:#2F4BD8; --accent-ink:#FFFFFF; --accent-soft:#E4E9FC;
+  --p1:#C42F2E; --p2:#A8680F; --p3:#617286; --ok:#1B8457; --late-bg:#FCE9E8;
+  --cbg-l:45%; --cfg-s:60%; --cfg-l:27%;
+  --f-display:'Bricolage Grotesque','IBM Plex Sans',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1319; --surface:#151D26; --ink:#E7EDF3; --muted:#94A3B3; --line:#263241; --hover:#1D2834;
+    --accent:#8197FF; --accent-ink:#0D1319; --accent-soft:#222C4D;
+    --p1:#FF8581; --p2:#E5B14F; --p3:#91A2B5; --ok:#52C58E; --late-bg:#3A1F22;
+    --cbg-l:65%; --cfg-s:85%; --cfg-l:80%; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1319; --surface:#151D26; --ink:#E7EDF3; --muted:#94A3B3; --line:#263241; --hover:#1D2834;
+  --accent:#8197FF; --accent-ink:#0D1319; --accent-soft:#222C4D;
+  --p1:#FF8581; --p2:#E5B14F; --p3:#91A2B5; --ok:#52C58E; --late-bg:#3A1F22;
+  --cbg-l:65%; --cfg-s:85%; --cfg-l:80%; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-inline:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.app{display:grid;grid-template-columns:224px minmax(0,1fr);gap:36px;max-width:1040px;margin:0 auto;padding-block:28px 72px}
+.side{min-width:0;position:sticky;top:env(safe-area-inset-top,0px);align-self:start}
+.brand{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:-.01em;margin:0 0 18px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav .sep{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 10px 6px}
+.nv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;min-width:0}
+.nv:hover{background:var(--hover)}
+.nv[aria-current="true"]{background:var(--accent-soft);font-weight:600}
+.nv .dot{width:9px;height:9px;border-radius:50%;flex:none;background:hsl(var(--h) 65% 50%)}
+.nv .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nv .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.nv[aria-current="true"] .n{color:var(--ink)}
+.addsp{display:flex;gap:6px;margin:10px 4px 0}
+.addsp input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 9px;font-size:13px}
+.addsp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;font-size:13px}
+.foot{margin:26px 10px 0;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.foot kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+main{min-width:0}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.head h1{font-family:var(--f-display);font-weight:700;font-size:32px;line-height:1.1;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.head .date{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);margin-top:6px;text-transform:capitalize}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-size:14px;font-weight:500}
+.ghost:hover{background:var(--hover)}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.st{display:flex;align-items:baseline;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:13px;color:var(--muted)}
+.st b{font-family:var(--f-mono);font-weight:500;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.st.late b{color:var(--p1)}
+.qa{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 14px;display:flex;align-items:center;gap:8px}
+.qa:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.qa input{flex:1;min-width:0;border:0;background:none;padding:10px 0;font-size:16px;outline:none}
+.qa button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:9px;padding:9px 16px;font-weight:600}
+.prev{min-height:26px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 4px 4px;font-size:12.5px;color:var(--muted)}
+.grp{margin-top:22px}
+.gh{display:flex;align-items:baseline;gap:10px;margin:0 4px 6px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.gh.late{color:var(--p1)}
+.gh .c{font-variant-numeric:tabular-nums}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 14px}
+.task+.task{border-top:1px solid var(--line)}
+.task:hover{background:var(--hover)}
+.chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--p2);background:none;margin-top:1px;padding:0;position:relative;flex:none}
+.chk[data-pr="1"]{border-color:var(--p1)}
+.chk[data-pr="3"]{border-color:var(--p3)}
+.chk:hover,.chk.on{background:var(--ok);border-color:var(--ok)}
+.chk.on::after,.chk:hover::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tt{background:none;border:0;padding:0;text-align:left;font-weight:500;font-size:15.5px;overflow-wrap:anywhere}
+.tt.done{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px;font-size:12.5px;color:var(--muted)}
+.chip{--h:200;display:inline-flex;align-items:center;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;background:hsl(var(--h) 65% var(--cbg-l) / .15);color:hsl(var(--h) var(--cfg-s) var(--cfg-l))}
+.pr{font-family:var(--f-mono);font-size:11.5px;font-weight:500}
+.pr.p1{color:var(--p1)} .pr.p2{color:var(--p2)} .pr.p3{color:var(--p3)}
+.due{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.due.late{color:var(--p1);background:var(--late-bg);border-radius:6px;padding:0 6px;font-weight:500}
+.due.today{color:var(--accent);font-weight:500}
+.acts{display:flex;gap:4px}
+.ib{border:1px solid transparent;background:none;border-radius:8px;padding:4px 9px;font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
+.ib:hover{border-color:var(--line);background:var(--surface);color:var(--ink)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:28px 20px;color:var(--muted);margin-top:22px;max-width:60ch}
+.empty b{color:var(--ink);display:block;font-family:var(--f-display);font-size:18px;margin-bottom:4px}
+.ov{position:fixed;inset:0;background:rgba(10,16,24,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:100%;max-width:480px;max-height:100%;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.sheet h2{font-family:var(--f-display);font-size:20px;margin:0}
+.fl{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted);font-family:var(--f-mono);letter-spacing:.04em;text-transform:uppercase}
+.fl input,.fl select,.fl textarea{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:9px 10px;font-family:var(--f-body);font-size:15px;color:var(--ink);text-transform:none;letter-spacing:0;width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:8px;font-family:var(--f-mono)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.qd{display:flex;gap:6px;flex-wrap:wrap}
+.qd button{border:1px solid var(--line);background:none;border-radius:999px;padding:3px 10px;font-size:12px;color:var(--muted)}
+.qd button:hover{background:var(--hover)}
+.btns{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.btns .r{display:flex;gap:8px}
+.pri{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:9px 18px;font-weight:600}
+.dng{border:1px solid var(--line);background:none;color:var(--p1);border-radius:10px;padding:9px 14px}
+.dng.arm{background:var(--p1);color:var(--bg);border-color:var(--p1)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:30;max-width:calc(100% - 32px);font-size:14px}
+.toast button{background:none;border:0;color:var(--bg);text-decoration:underline;font-weight:600;padding:0}
+@media (max-width:819px){
+  .app{grid-template-columns:minmax(0,1fr);gap:14px;padding-top:18px}
+  .side{position:static}
+  .brand{margin-bottom:10px}
+  .nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:6px;scrollbar-width:thin}
+  .nav .sep{display:none}
+  .nv{width:auto;flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px}
+  .nv .lbl{overflow:visible}
+  .addsp,.foot{display:none}
+  .head h1{font-size:26px}
+  .task{padding:12px}
+  .acts{grid-column:2;margin-top:-4px}
+}
+@media (prefers-reduced-motion:no-preference){.chk{transition:background .15s,border-color .15s}}
+</style>
+
+<div class="app">
+  <aside class="side">
+    <p class="brand">Cockpit</p>
+    <nav class="nav" id="nav" aria-label="Espaces"></nav>
+    <form class="addsp" id="addsp"><input id="spname" placeholder="Nouvel espace" aria-label="Nom du nouvel espace" maxlength="30"><button type="submit">Ajouter</button></form>
+    <div class="foot">
+      <span>Notifications : P1 à 8 h, 12 h, 16 h, 20 h · P2 à 8 h et 20 h · P3 à 8 h.</span>
+      <button class="ib" id="logout" type="button">Changer de jeton</button>
+      <span><kbd>n</kbd> pour ajouter une tâche</span>
+    </div>
+  </aside>
+  <main>
+    <div class="head">
+      <div><h1 id="vt">Focus</h1><div class="date" id="dt"></div></div>
+      <button class="ghost" id="sync" type="button" aria-label="Synchroniser">↻</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <form class="qa" id="qa" autocomplete="off">
+      <input id="q" placeholder="Ajouter : Appeler Marc demain !1 #time2ai" aria-label="Nouvelle tâche">
+      <button type="submit">Ajouter</button>
+    </form>
+    <div class="prev" id="prev"></div>
+    <div id="out"><div class="empty"><b>Chargement</b>Tes tâches arrivent.</div></div>
+  </main>
+</div>
+
+<div class="ov" id="ov" hidden>
+  <form class="sheet" id="ed">
+    <h2>Modifier la tâche</h2>
+    <label class="fl">Titre<input id="e-title" required maxlength="200"></label>
+    <div class="row2">
+      <label class="fl">Espace<select id="e-space"></select></label>
+      <label class="fl">Statut<select id="e-status"><option value="todo">À faire</option><option value="waiting">En attente</option></select></label>
+    </div>
+    <div class="fl">Priorité<div class="seg" id="e-pr"><button type="button" data-v="1">P1 urgent</button><button type="button" data-v="2">P2</button><button type="button" data-v="3">P3</button></div></div>
+    <div class="row2">
+      <label class="fl">Échéance<input type="date" id="e-due"></label>
+      <label class="fl">Répéter<select id="e-recur"><option value="none">Jamais</option><option value="daily">Chaque jour</option><option value="weekly">Chaque semaine</option><option value="monthly">Chaque mois</option></select></label>
+    </div>
+    <div class="qd" id="e-qd"></div>
+    <label class="fl">Rappel à une heure précise<input type="datetime-local" id="e-remind"></label>
+    <div class="qd" id="e-qr"></div>
+    <label class="fl">Note<textarea id="e-note" rows="3" maxlength="1000"></textarea></label>
+    <div class="btns">
+      <button type="button" class="dng" id="e-del">Supprimer</button>
+      <div class="r"><button type="button" class="ghost" id="e-cancel">Annuler</button><button type="submit" class="pri">Enregistrer</button></div>
+    </div>
+  </form>
+</div>
+<div id="toastbox"></div>
+
+<script>
+(function(){
+'use strict';
+var DEFAULT_SPACES=[
+ {id:'trainer',name:'trAIner',h:265},{id:'time2ai',name:'Time2AI',h:185},{id:'essec',name:'ESSEC',h:215},
+ {id:'stages',name:'Stages & alternance',h:28},{id:'vigie',name:'Vigie',h:145},{id:'admin',name:'Admin',h:55},
+ {id:'perso',name:'Perso',h:95},{id:'clara',name:'Clara',h:345}
+];
+var tasks=new Map(), spaces=DEFAULT_SPACES.slice(), view='focus', editId=null, ePr=2;
+var $=function(s){return document.querySelector(s)};
+function h(tag,attrs){
+  var e=document.createElement(tag); attrs=attrs||{};
+  Object.keys(attrs).forEach(function(k){var v=attrs[k];
+    if(k==='class')e.className=v; else if(k==='style')e.style.cssText=v;
+    else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);
+    else if(k==='value')e.value=v; else if(v===true)e.setAttribute(k,''); else if(v!==false&&v!=null)e.setAttribute(k,v);});
+  for(var i=2;i<arguments.length;i++){var c=arguments[i];
+    (Array.isArray(c)?c:[c]).forEach(function(x){if(x==null||x===false)return;e.append(x.nodeType?x:document.createTextNode(x));});}
+  return e;
+}
+/* dates */
+var pad=function(n){return String(n).padStart(2,'0')};
+var iso=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var todayStr=function(){return iso(new Date())};
+var parseISO=function(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+var dayDiff=function(a,b){return Math.round((parseISO(a)-parseISO(b))/864e5)};
+var addDays=function(s,n){var d=parseISO(s);d.setDate(d.getDate()+n);return iso(d)};
+var addMonth=function(s){var d=parseISO(s);d.setMonth(d.getMonth()+1);return iso(d)};
+function fmtDue(due){
+  var T=todayStr(), d=dayDiff(due,T);
+  if(d<0)return {t:'En retard de '+(-d)+' j',c:'late'};
+  if(d===0)return {t:"Aujourd'hui",c:'today'};
+  if(d===1)return {t:'Demain',c:''};
+  return {t:parseISO(due).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}),c:''};
+}
+/* scoring */
+function score(t){
+  var s={1:30,2:16,3:6}[t.pr]||16;
+  if(t.due){var d=dayDiff(t.due,todayStr()); if(d<0)s+=60+Math.min(-d,10)*2; else s+=Math.max(0,40-d*4);}
+  return s;
+}
+function groupOf(t){
+  if(t.status==='waiting')return 'wait';
+  if(!t.due)return 'none';
+  var d=dayDiff(t.due,todayStr());
+  return d<0?'late':d===0?'today':d<=7?'week':'later';
+}
+var GROUPS=[['late','En retard'],['today',"Aujourd'hui"],['week','7 prochains jours'],['later','Plus tard'],['none','Sans échéance'],['wait','En attente']];
+function openTasks(){return Array.from(tasks.values()).filter(function(t){return t.status!=='done'})}
+function inFocus(t){
+  if(t.status==='waiting'||t.status==='done')return false;
+  if(t.pr===1)return true;
+  return t.due&&dayDiff(t.due,todayStr())<=2;
+}
+function spaceOf(id){return spaces.find(function(s){return s.id===id})||{id:id,name:id||'Sans espace',h:210}}
+/* quick add parser */
+var norm=function(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'')};
+function findSpace(w){var n=norm(w);if(!n)return null;return spaces.find(function(s){return norm(s.name).indexOf(n)===0||s.id.indexOf(n)===0})||null}
+var WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+function parseQuick(text){
+  var t=' '+text+' ', pr=null, due=null, sp=null, time=null, T=todayStr();
+  t=t.replace(/\s(?:!([123])|p([123]))(?=\s)/i,function(m,a,b){pr=+(a||b);return ' '});
+  /* heure : "à 14h", "à 14h30", "14h30", "14:30" (un simple "2h" dans un titre n'est pas une heure) */
+  t=t.replace(/\s(?:(?:à|a)\s(\d{1,2})(?:[h:](\d{2})?)?|(\d{1,2})[h:](\d{2}))(?=\s)/i,function(m,h1,m1,h2,m2){
+    var hh=+(h1||h2), mm=+(m1||m2||0); if(hh>23||mm>59)return m;
+    time=pad(hh)+':'+pad(mm);return ' '});
+  t=t.replace(/\s#([\p{L}\d-]+)(?=\s)/u,function(m,w){var s=findSpace(w);if(s){sp=s.id;return ' '}return m});
+  var rules=[
+    [/\s(?:aujourd['’]hui|auj)(?=\s)/i,function(){return T}],
+    [/\sapr[eè]s-demain(?=\s)/i,function(){return addDays(T,2)}],
+    [/\sdemain(?=\s)/i,function(){return addDays(T,1)}],
+    [/\sj\+(\d{1,3})(?=\s)/i,function(m){return addDays(T,+m[1])}],
+    [/\sdans (\d{1,3}) jours?(?=\s)/i,function(m){return addDays(T,+m[1])}],
+    [/\s(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?=\s)/,function(m){
+      var y=m[3]?(+m[3]<100?2000+ +m[3]:+m[3]):new Date().getFullYear();
+      var s=y+'-'+pad(+m[2])+'-'+pad(+m[1]);
+      if(!m[3]&&s<T)s=(y+1)+'-'+pad(+m[2])+'-'+pad(+m[1]);
+      return s}],
+    [new RegExp('\\s('+WD.join('|')+')(?=\\s)','i'),function(m){
+      var target=WD.indexOf(m[1].toLowerCase()), cur=new Date().getDay(), add=(target-cur+7)%7; if(add===0)add=7; return addDays(T,add)}]
+  ];
+  rules.forEach(function(r){if(due)return;var m=t.match(r[0]);if(m){due=r[1](m);t=t.replace(r[0],' ')}});
+  var title=t.replace(/\s+/g,' ').trim();
+  if(title)title=title.charAt(0).toUpperCase()+title.slice(1);
+  return {title:title,pr:pr,due:due,space:sp,time:time};
+}
+/* rappel à heure précise : sans date, aujourd'hui si l'heure n'est pas passée, sinon demain */
+function remindFor(p){
+  if(!p.time)return {due:p.due||'',remind:''};
+  var due=p.due;
+  if(!due){var n=new Date();due=(p.time>pad(n.getHours())+':'+pad(n.getMinutes()))?todayStr():addDays(todayStr(),1)}
+  return {due:due,remind:due+'T'+p.time};
+}
+var shiftRemind=function(t,due){return t.remind&&due?due+'T'+t.remind.slice(11):(t.remind||'')};
+/* données : tasks.json dans le dépôt GitHub (API contents), jeton gardé sur cet appareil */
+var CFG_KEY='cockpit.cfg', CACHE_KEY='cockpit.cache', DEFAULT_REPO='Adam2328/cockpit';
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+var cfg=lsGet(CFG_KEY), sha=null, saving=false, dirty=false;
+function api(method,body){
+  return fetch((cfg.api||'https://api.github.com')+'/repos/'+cfg.repo+'/contents/tasks.json',{method:method,cache:'no-store',
+    headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'},body:body&&JSON.stringify(body)});
+}
+var b64dec=function(s){var b=atob(s.replace(/\n/g,''));return new TextDecoder().decode(Uint8Array.from(b,function(c){return c.charCodeAt(0)}))};
+var b64enc=function(s){var r='';new TextEncoder().encode(s).forEach(function(c){r+=String.fromCharCode(c)});return btoa(r)};
+function snapshot(){return {exported_at:todayStr(),timezone:'Europe/Paris',spaces:spaces,tasks:Array.from(tasks.values())}}
+/* une tâche par ligne, comme l'export d'origine : les diffs restent lisibles */
+function serialize(d){
+  return '{\n  "exported_at": "'+d.exported_at+'",\n  "timezone": "'+d.timezone+'",\n  "spaces": [\n'+
+    d.spaces.map(function(s){return '    '+JSON.stringify(s)}).join(',\n')+'\n  ],\n  "tasks": [\n'+
+    d.tasks.map(function(t){return '    '+JSON.stringify(t)}).join(',\n')+'\n  ]\n}\n';
+}
+function apply(d){
+  if(Array.isArray(d.spaces)&&d.spaces.length)spaces=d.spaces;
+  tasks=new Map();
+  (d.tasks||[]).forEach(function(x){tasks.set(x.id,Object.assign({pr:2,status:'todo',space:'perso',due:'',recur:'none',remind:''},x))});
+}
+async function pull(){
+  var r=await api('GET');
+  if(!r.ok)throw new Error(r.status);
+  var j=await r.json(), d=JSON.parse(b64dec(j.content));
+  sha=j.sha;lsSet(CACHE_KEY,d);apply(d);render();
+}
+/* une seule écriture à la fois ; si d'autres changements arrivent pendant, on repart avec l'état le plus récent */
+async function push(){
+  if(saving){dirty=true;return}
+  saving=true;var tries=0;
+  try{
+    do{
+      dirty=false;var d=snapshot();
+      var r=await api('PUT',{message:'app: mise à jour',content:b64enc(serialize(d)),sha:sha});
+      if((r.status===409||r.status===422)&&++tries<3){ /* sha périmé : notre version l'emporte */
+        sha=(await (await api('GET')).json()).sha;dirty=true;continue;
+      }
+      if(!r.ok)throw new Error(r.status);
+      sha=(await r.json()).content.sha;lsSet(CACHE_KEY,d);
+    }while(dirty);
+  }catch(e){toast('Enregistrement impossible ('+e.message+'). Recharge la page.')}
+  finally{saving=false}
+}
+function upd(id,data){
+  var t=tasks.get(id);if(!t)return;
+  tasks.set(id,Object.assign({},t,data));render();push();
+}
+function addTask(data){
+  var id='t'+Date.now().toString(36);
+  tasks.set(id,Object.assign({id:id},data));render();push();
+}
+/* toast */
+var toastTimer=null;
+function toast(msg,undo){
+  var box=$('#toastbox');box.replaceChildren();
+  var el=h('div',{class:'toast',role:'status'},h('span',{},msg));
+  if(undo)el.append(h('button',{onclick:function(){undo();box.replaceChildren()}},'Annuler'));
+  box.append(el);clearTimeout(toastTimer);toastTimer=setTimeout(function(){box.replaceChildren()},5500);
+}
+/* actions */
+function complete(t){
+  var prev={};
+  if(t.recur&&t.recur!=='none'){
+    var T=todayStr(), base=(t.due&&t.due>T)?t.due:T;
+    var next=t.recur==='daily'?addDays(base,1):t.recur==='weekly'?addDays(base,7):addMonth(base);
+    prev={due:t.due||'',remind:t.remind||''};
+    upd(t.id,{due:next,remind:shiftRemind(t,next),lastDone:Date.now()});
+    toast('Fait. Prochaine échéance : '+fmtDue(next).t.toLowerCase(),function(){upd(t.id,prev)});
+  }else{
+    upd(t.id,{status:'done',doneAt:Date.now()});
+    toast('Tâche terminée',function(){upd(t.id,{status:t.status||'todo',doneAt:0})});
+  }
+}
+function snooze(t){
+  var T=todayStr(), base=(t.due&&t.due>=T)?t.due:T, old={due:t.due||'',remind:t.remind||''}, next=addDays(base,1);
+  upd(t.id,{due:next,remind:shiftRemind(t,next)});
+  toast('Reportée à demain',function(){upd(t.id,old)});
+}
+/* rendering */
+function row(t,doneView){
+  var sp=spaceOf(t.space), meta=h('div',{class:'meta'});
+  meta.append(h('span',{class:'chip',style:'--h:'+sp.h},sp.name));
+  meta.append(h('span',{class:'pr p'+t.pr},'P'+t.pr));
+  if(t.due&&!doneView){var f=fmtDue(t.due);meta.append(h('span',{class:'due '+f.c},t.status==='waiting'?'Relance '+f.t.toLowerCase():f.t))}
+  if(t.remind&&!doneView)meta.append(h('span',{class:'due'},'🔔 '+t.remind.slice(11)));
+  if(t.recur&&t.recur!=='none')meta.append(h('span',{},{daily:'↻ chaque jour',weekly:'↻ chaque semaine',monthly:'↻ chaque mois'}[t.recur]));
+  if(t.note)meta.append(h('span',{title:t.note},'Note'));
+  var chk=h('button',{class:'chk'+(doneView?' on':''),'data-pr':t.pr,'aria-label':doneView?'Rouvrir la tâche':'Terminer la tâche',onclick:function(){
+    if(doneView)upd(t.id,{status:'todo',doneAt:0});else complete(t);}});
+  var acts=h('div',{class:'acts'});
+  if(!doneView)acts.append(h('button',{class:'ib',title:'Reporter à demain',onclick:function(){snooze(t)}},'+1 j'));
+  acts.append(h('button',{class:'ib',onclick:function(){openEdit(t.id)}},'Modifier'));
+  return h('div',{class:'task'},chk,h('div',{style:'min-width:0'},h('button',{class:'tt'+(doneView?' done':''),onclick:function(){openEdit(t.id)}},t.title),meta),acts);
+}
+function sortTasks(a,b){var d=score(b)-score(a);if(d)return d;return (a.due||'9').localeCompare(b.due||'9')||(a.created||0)-(b.created||0)}
+function renderNav(){
+  var nav=$('#nav');nav.replaceChildren();
+  var open=openTasks();
+  function item(id,label,n,hue){
+    nav.append(h('button',{class:'nv','aria-current':view===id?'true':'false',style:hue!=null?'--h:'+hue:'',onclick:function(){view=id;render()}},
+      hue!=null?h('span',{class:'dot'}):null,h('span',{class:'lbl'},label),h('span',{class:'n'},String(n))));
+  }
+  item('focus','Focus',open.filter(inFocus).length);
+  item('all','Tout',open.length);
+  nav.append(h('div',{class:'sep'},'Espaces'));
+  spaces.forEach(function(s){item(s.id,s.name,open.filter(function(t){return t.space===s.id}).length,s.h)});
+  nav.append(h('div',{class:'sep'},'Archive'));
+  item('done','Terminé',Array.from(tasks.values()).filter(function(t){return t.status==='done'}).length);
+}
+function renderStats(){
+  var o=openTasks(),T=todayStr(),box=$('#stats');box.replaceChildren();
+  var late=o.filter(function(t){return t.status!=='waiting'&&t.due&&t.due<T}).length;
+  var today=o.filter(function(t){return t.status!=='waiting'&&t.due===T}).length;
+  var week=o.filter(function(t){return t.status!=='waiting'&&t.due&&dayDiff(t.due,T)>0&&dayDiff(t.due,T)<=7}).length;
+  var wait=o.filter(function(t){return t.status==='waiting'}).length;
+  var wk=Array.from(tasks.values()).filter(function(t){return t.status==='done'&&t.doneAt&&Date.now()-t.doneAt<7*864e5}).length;
+  [['late','En retard',late],['',"Aujourd'hui",today],['','Cette semaine',week],['','En attente',wait],['','Faites en 7 j',wk]].forEach(function(s){
+    box.append(h('div',{class:'st '+s[0]},h('b',{},String(s[2])),h('span',{},s[1])));});
+}
+function renderList(){
+  var out=$('#out');out.replaceChildren();
+  var all=Array.from(tasks.values());
+  if(view==='done'){
+    var d=all.filter(function(t){return t.status==='done'}).sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0)}).slice(0,60);
+    if(!d.length){out.append(h('div',{class:'empty'},h('b',{},'Rien de terminé pour l’instant'),'Les tâches cochées arrivent ici, avec un bouton pour les rouvrir.'));return}
+    out.append(h('div',{class:'grp'},h('div',{class:'list'},d.map(function(t){return row(t,true)}))));return;
+  }
+  var list=openTasks();
+  if(view==='focus')list=list.filter(inFocus);
+  else if(view!=='all')list=list.filter(function(t){return t.space===view});
+  if(!list.length){
+    out.append(view==='focus'
+      ?h('div',{class:'empty'},h('b',{},'Rien d’urgent'),'Aucun retard, rien pour les deux prochains jours et aucune P1 ouverte. Ouvre Tout pour avancer sur le reste.')
+      :h('div',{class:'empty'},h('b',{},'Aucune tâche ici'),'Tape une tâche dans la barre du haut. Pour viser cet espace, ajoute #'+(view==='all'?'espace':norm(spaceOf(view).name))+'.'));
+    return;
+  }
+  GROUPS.forEach(function(g){
+    var items=list.filter(function(t){return groupOf(t)===g[0]}).sort(sortTasks);
+    if(!items.length)return;
+    out.append(h('section',{class:'grp'},
+      h('div',{class:'gh'+(g[0]==='late'?' late':'')},h('span',{},g[1]),h('span',{class:'c'},String(items.length))),
+      h('div',{class:'list'},items.map(function(t){return row(t,false)}))));
+  });
+}
+function render(){
+  renderNav();renderStats();
+  var names={focus:'Focus',all:'Toutes les tâches',done:'Terminé'};
+  $('#vt').textContent=names[view]||spaceOf(view).name;
+  $('#dt').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  renderList();updatePrev();
+}
+/* quick add */
+function updatePrev(){
+  var v=$('#q').value, box=$('#prev');box.replaceChildren();
+  if(!v.trim())return;
+  var p=parseQuick(v), sp=p.space||(view!=='focus'&&view!=='all'&&view!=='done'?view:'perso');
+  box.append(h('span',{class:'chip',style:'--h:'+spaceOf(sp).h},spaceOf(sp).name));
+  box.append(h('span',{class:'pr p'+(p.pr||2)},'P'+(p.pr||2)));
+  var r=remindFor(p);
+  if(r.due)box.append(h('span',{class:'due'},fmtDue(r.due).t));
+  if(r.remind)box.append(h('span',{class:'due'},'🔔 '+p.time));
+}
+$('#q').addEventListener('input',updatePrev);
+$('#qa').addEventListener('submit',function(e){
+  e.preventDefault();
+  var p=parseQuick($('#q').value);if(!p.title)return;
+  var sp=p.space||(view!=='focus'&&view!=='all'&&view!=='done'?view:'perso');
+  var r=remindFor(p);
+  addTask({title:p.title,space:sp,pr:p.pr||2,due:r.due,remind:r.remind,status:'todo',note:'',recur:'none',created:Date.now(),doneAt:0});
+  $('#q').value='';updatePrev();
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&!$('#ov').hidden){closeEdit();return}
+  var tag=(e.target.tagName||'').toLowerCase();
+  if(e.key==='n'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&tag!=='input'&&tag!=='textarea'&&tag!=='select'){e.preventDefault();$('#q').focus()}
+});
+/* spaces */
+$('#addsp').addEventListener('submit',function(e){
+  e.preventDefault();
+  var name=$('#spname').value.trim();if(!name)return;
+  var id=norm(name)||('s'+Date.now());
+  if(spaces.some(function(s){return s.id===id}))return;
+  var used=spaces.map(function(s){return s.h});
+  var hue=(used.length?Math.max.apply(null,used):0)+47;hue=hue%360;
+  spaces=spaces.concat([{id:id,name:name,h:hue}]);
+  $('#spname').value='';render();push();
+});
+/* edit sheet */
+function setPr(v){ePr=v;document.querySelectorAll('#e-pr button').forEach(function(b){b.setAttribute('aria-pressed',String(+b.dataset.v===v))})}
+document.querySelectorAll('#e-pr button').forEach(function(b){b.addEventListener('click',function(){setPr(+b.dataset.v)})});
+function openEdit(id){
+  var t=tasks.get(id);if(!t)return;editId=id;
+  $('#e-title').value=t.title;
+  var sel=$('#e-space');sel.replaceChildren();
+  var list=spaces.slice();if(!list.some(function(s){return s.id===t.space}))list.push(spaceOf(t.space));
+  list.forEach(function(s){sel.append(h('option',{value:s.id},s.name))});sel.value=t.space;
+  $('#e-status').value=t.status==='waiting'?'waiting':'todo';
+  $('#e-due').value=t.due||'';$('#e-recur').value=t.recur||'none';$('#e-note').value=t.note||'';
+  setPr(t.pr||2);
+  var qd=$('#e-qd');qd.replaceChildren();
+  [["Aujourd'hui",0],['Demain',1],['Dans 3 j',3],['Dans 1 sem.',7],['Sans date',null]].forEach(function(q){
+    qd.append(h('button',{type:'button',onclick:function(){$('#e-due').value=q[1]==null?'':addDays(todayStr(),q[1])}},q[0]))});
+  $('#e-remind').value=t.remind||'';
+  var qr=$('#e-qr');qr.replaceChildren();
+  [['Dans 1 h',function(){var d=new Date(Date.now()+36e5);return iso(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes())}],
+   ['Ce soir 20 h',function(){return todayStr()+'T20:00'}],
+   ['Demain 8 h',function(){return addDays(todayStr(),1)+'T08:00'}],
+   ['Aucun',function(){return ''}]].forEach(function(q){
+    qr.append(h('button',{type:'button',onclick:function(){$('#e-remind').value=q[1]()}},q[0]))});
+  var del=$('#e-del');del.textContent='Supprimer';del.classList.remove('arm');
+  $('#ov').hidden=false;$('#e-title').focus();
+}
+function closeEdit(){$('#ov').hidden=true;editId=null}
+$('#e-cancel').addEventListener('click',closeEdit);
+$('#ov').addEventListener('mousedown',function(e){if(e.target===$('#ov'))closeEdit()});
+$('#ed').addEventListener('submit',function(e){
+  e.preventDefault();if(!editId)return;
+  var title=$('#e-title').value.trim();if(!title)return;
+  var remind=$('#e-remind').value||'', due=$('#e-due').value||'';
+  if(remind&&!due)due=remind.slice(0,10); /* un rappel daté donne aussi l'échéance */
+  upd(editId,{title:title,space:$('#e-space').value,status:$('#e-status').value,pr:ePr,due:due,remind:remind,recur:$('#e-recur').value,note:$('#e-note').value.trim()});
+  closeEdit();
+});
+$('#e-del').addEventListener('click',function(){
+  var b=$('#e-del');
+  if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Confirmer la suppression';return}
+  var id=editId;closeEdit();
+  tasks.delete(id);render();push();
+});
+/* connexion et démarrage */
+function showSetup(msg){
+  var repo=h('input',{value:(cfg&&cfg.repo)||DEFAULT_REPO,required:true,autocapitalize:'off',autocomplete:'off'});
+  var tok=h('input',{type:'password',required:true,placeholder:'github_pat_…',autocomplete:'off'});
+  $('#out').replaceChildren(h('form',{class:'sheet',style:'margin-top:22px',onsubmit:function(e){
+    e.preventDefault();
+    cfg={repo:repo.value.trim(),token:tok.value.trim()};lsSet(CFG_KEY,cfg);start();
+  }},
+    h('h2',{},'Connexion'),
+    msg?h('div',{style:'color:var(--p1)'},msg):null,
+    h('div',{style:'color:var(--muted);font-size:14px'},'Colle un jeton GitHub limité à ce dépôt (droit « Contents : lecture et écriture »). Il reste sur cet appareil.'),
+    h('label',{class:'fl'},'Dépôt',repo),h('label',{class:'fl'},'Jeton',tok),
+    h('div',{class:'btns'},h('span'),h('button',{class:'pri',type:'submit'},'Se connecter'))));
+}
+async function start(){
+  if(!cfg||!cfg.token){showSetup();return}
+  var cached=lsGet(CACHE_KEY);if(cached){apply(cached);render()}
+  try{await pull()}
+  catch(e){
+    if(['401','403','404'].indexOf(e.message)>=0){showSetup('Connexion refusée ('+e.message+'). Vérifie le dépôt et le jeton.');return}
+    if(!cached)$('#out').replaceChildren(h('div',{class:'empty'},h('b',{},'Hors ligne'),'Impossible de charger les tâches. Réessaie avec ↻.'));
+    else toast('Hors ligne : données du dernier chargement');
+  }
+}
+$('#sync').addEventListener('click',function(){if(!saving)start()});
+$('#logout').addEventListener('click',function(){try{localStorage.removeItem(CFG_KEY)}catch(e){}cfg=null;showSetup()});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&cfg&&!saving&&!dirty)pull().catch(function(){})});
+render();start();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+})();
+</script>
