@@ -469,13 +469,55 @@ function showSetup(msg){
 /* ---------- feuilles et pages ---------- */
 function closeLayer(){layer=null;$('#layer').innerHTML=''}
 function openAdd(prefill){
-  layer={type:'add',text:prefill||'',last:null};
+  layer={type:'add',form:{text:prefill||'',manual:{},due:'',time:'',prio:2,space:'',note:''}};
+  var T=todayStr(),mon=addDays(T,(8-parseISO(T).getDay())%7||7);
+  var q=function(k,v,l,i){return '<button class="btn q" type="button" data-a="'+k+'" data-v="'+v+'">'+(i?ic(i,'s'):'')+l+'</button>'};
   $('#layer').innerHTML='<div class="layer"><div class="scrim" data-act="close"></div><section class="sheet" aria-label="Nouvelle tâche"><div class="top"><span class="lbl m">Nouvelle tâche</span><button class="btn" data-act="close" aria-label="Fermer">'+ic('close')+'</button></div><div id="last"></div>'+
-   '<label class="vh" for="phrase">Tâche, en une phrase</label><textarea id="phrase" class="inp" rows="2"></textarea><div id="pv"></div><label class="fl m" for="addnote" style="margin:16px 0 6px">Note · facultatif</label><textarea id="addnote" class="note" rows="2" style="min-height:64px"></textarea>'+
-   '<div class="toks" id="toks" role="group" aria-label="Raccourcis de saisie"></div><button class="btn go" id="go" data-act="addgo">'+ic('check')+'Ajouter</button></section></div>';
-  var ta=$('#phrase');ta.value=layer.text;ta.oninput=function(){layer.text=ta.value;addPreview()};
+   '<label class="vh" for="phrase">Tâche</label><textarea id="phrase" class="inp" rows="2"></textarea>'+
+   '<span class="fl m" style="margin-top:20px">Jour</span><label class="field">'+ic('cal')+'<input type="date" id="a-due" aria-label="Jour"></label>'+
+   '<div class="qs" role="group" aria-label="Raccourcis jour">'+q('due',T,'Aujourd\'hui')+q('due',addDays(T,1),'Demain')+q('due',mon,'Lundi')+q('due',addDays(T,7),'+ 1 semaine')+q('due','','Sans date')+'</div>'+
+   '<span class="fl m">Rappel à une heure précise</span><div class="rem"><button class="sw" type="button" id="a-sw" role="switch" aria-checked="false" aria-label="Activer le rappel"></button><label class="vh" for="a-time">Heure</label><input id="a-time" class="tm m" type="time" value="09:00"></div>'+
+   '<div class="qs" role="group" aria-label="Raccourcis rappel">'+q('rem','in1h','Dans 1 h','clock')+q('rem','eve','Ce soir','moon')+q('rem','morn','Demain 8 h','dawn')+'</div>'+
+   '<span class="fl m">Priorité</span><div class="seg c3" role="group" id="a-pr">'+[[1,'Urgent'],[2,'Normal'],[3,'Faible']].map(function(x){return '<button class="btn sg" type="button" data-a="prio" data-v="'+x[0]+'"><span class="m">!'+x[0]+'</span><small>'+x[1]+'</small></button>'}).join('')+'</div>'+
+   '<div class="hint m" id="a-nf"></div>'+
+   '<span class="fl m">Espace</span><label class="field"><span class="sp" id="a-spc" style="flex:1;display:flex;align-items:center;gap:10px"><i class="sq" style="width:10px;height:10px"></i><select id="a-space" aria-label="Espace">'+spaces.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'}).join('')+'</select></span>'+ic('chev')+'</label>'+
+   '<label class="fl m" for="addnote">Note · facultatif</label><textarea id="addnote" class="note" rows="2" style="min-height:64px"></textarea>'+
+   '<button class="btn go" id="go" data-act="addgo" style="margin-top:20px">'+ic('check')+'Ajouter</button></section></div>';
+  var f=layer.form,ta=$('#phrase');ta.value=f.text;
+  ta.oninput=function(){f.text=ta.value;syncAdd()};
   ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addGo()}};
-  addPreview();ta.focus();
+  $('#addnote').oninput=function(){f.note=this.value};
+  var man=function(k,v){f.manual[k]=true;f[k]=v;syncAdd()};
+  $('#a-due').onchange=function(){man('due',this.value)};
+  $('#a-time').onchange=function(){man('time',this.value||'09:00')};
+  $('#a-space').onchange=function(){man('space',this.value)};
+  $('#a-sw').onclick=function(){man('time',this.getAttribute('aria-checked')==='true'?'':($('#a-time').value||'09:00'))};
+  $('#layer').querySelector('.sheet').addEventListener('click',function(e){
+    var b=e.target.closest('[data-a]');if(!b)return;var k=b.dataset.a,v=b.dataset.v;
+    if(k==='due')man('due',v);
+    else if(k==='prio')man('prio',+v);
+    else if(k==='rem'){var r=remindAt(v);f.manual.due=true;f.due=r.due;f.manual.time=true;f.time=r.time;syncAdd()}
+  });
+  syncAdd();ta.focus();
+}
+/* valeurs effectives : ce qui est réglé à la main l'emporte sur la phrase, qui l'emporte sur les défauts */
+function addVals(){
+  var f=layer.form,p=parsePhrase(f.text),T=todayStr();
+  var time=f.manual.time?f.time:(p.time||''),due=f.manual.due?f.due:(p.days!=null?addDays(T,p.days):'');
+  if(time&&!due)due=time>nowHM()?T:addDays(T,1);
+  return {title:p.title,due:due,time:time,prio:f.manual.prio?f.prio:p.prio,
+    space:f.manual.space?f.space:(p.space?p.space.id:(view==='spaces'&&spId?spId:'perso'))};
+}
+function syncAdd(){
+  var v=addVals();
+  $('#a-due').value=v.due;
+  document.querySelectorAll('#layer [data-a="due"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.v===v.due))});
+  $('#a-sw').setAttribute('aria-checked',String(!!v.time));
+  if(v.time)$('#a-time').value=v.time;
+  document.querySelectorAll('#a-pr [data-a="prio"]').forEach(function(b){b.setAttribute('aria-pressed',String(+b.dataset.v===v.prio))});
+  $('#a-nf').innerHTML=ic('bell','s')+'Notifs : '+({1:'8h · 12h · 16h · 20h',2:'8h · 20h',3:'8h'}[v.prio]);
+  $('#a-space').value=v.space;$('#a-spc').style.setProperty('--h',hueOf(spaceOf(v.space)));
+  $('#go').disabled=!v.title;
 }
 function parsePhrase(text){
   var d0=parseISO(todayStr()),now=new Date(),t=' '+text+' ',out={prio:2,prioSet:false,space:null,time:null,days:null,title:''};
@@ -508,34 +550,14 @@ function parsePhrase(text){
   out.title=cap(title);
   return out;
 }
-function dateLabel(days){
-  if(days==null)return '';
-  var d=addDays(todayStr(),days),f=fr(d,{weekday:'short',day:'numeric',month:'short'});
-  return days===0?'Aujourd\'hui · '+f:days===1?'Demain · '+f:f;
-}
-function addPreview(){
-  var text=layer.text,p=parsePhrase(text),PL={1:'!1 Urgent',2:'!2 Normal',3:'!3 Faible'},NF={1:'8h · 12h · 16h · 20h',2:'8h · 20h',3:'8h'};
-  $('#pv').innerHTML='<div class="pv" aria-live="polite"><div class="lb m">Compris</div><div class="pt">'+esc(p.title)+'</div><div class="pchips">'+
-   '<span class="btn chip'+(p.days!=null?' on':'')+'">'+ic('cal','s')+esc(dateLabel(p.days)||'Date')+'</span>'+
-   '<span class="btn chip'+(p.time?' on':'')+'">'+ic('bell','s')+(p.time?'Rappel '+p.time:'Rappel')+'</span>'+
-   '<span class="btn chip m'+(p.prioSet?(p.prio===1?' on inv':' on'):'')+'">'+(p.prioSet?PL[p.prio]:'!2 Normal')+'</span>'+
-   '<span class="btn chip'+(p.space?' on sp':'')+'"'+(p.space?' style="--h:'+hueOf(p.space)+'"':'')+'><i class="sq"></i>'+esc(p.space?p.space.name:'Espace')+'</span></div>'+
-   '<div class="notif m">'+ic('bell','s')+'Notifs : '+NF[p.prio]+'</div></div>';
-  $('#go').disabled=!p.title;
-  var toks=$('#toks'),frag=text.match(/#([^\s#]*)$/),list;
-  if(frag){var k=norm(frag[1]);list=spaces.filter(function(s){return !k||norm(s.name).indexOf(k)===0||s.id.indexOf(k)===0}).map(function(s){return {l:'#'+s.name,v:text.slice(0,frag.index)+'#'+norm(s.name)+' ',h:hueOf(s)}})}
-  else list=['!1','!2','!3','#','demain','ce soir','lundi','14h'].map(function(k){return {l:k,v:text.replace(/\s+$/,'')+(text.trim()?' ':'')+k+(k==='#'?'':' ')}});
-  toks.innerHTML=list.map(function(x,i){return '<button class="btn tok m'+(x.h!=null?' sp':'')+'"'+(x.h!=null?' style="--h:'+x.h+'"':'')+' data-tok="'+i+'">'+esc(x.l)+'</button>'}).join('');
-  toks.onclick=function(e){var b=e.target.closest('[data-tok]');if(!b)return;layer.text=list[+b.dataset.tok].v;$('#phrase').value=layer.text;addPreview();$('#phrase').focus()};
-}
 function addGo(){
-  var text=layer.text,p=parsePhrase(text);if(!p.title)return;
-  var note=$('#addnote').value.trim(),due=p.days!=null?addDays(todayStr(),p.days):'',sp=p.space?p.space.id:(view==='spaces'&&spId?spId:'perso');
-  var id=addTask({title:p.title,space:sp,pr:p.prio,due:due,remind:p.time&&due?due+'T'+p.time:'',status:'todo',note:note,recur:'none',created:Date.now(),doneAt:0});
-  layer.text='';layer.undo={id:id,text:text,note:note};
+  var f=layer.form,v=addVals();if(!v.title)return;
+  var id=addTask({title:v.title,space:v.space,pr:v.prio,due:v.due,remind:v.time&&v.due?v.due+'T'+v.time:'',status:'todo',note:f.note.trim(),recur:'none',created:Date.now(),doneAt:0});
+  var undo={id:id,text:f.text,note:f.note};
+  layer.form={text:'',manual:{},due:'',time:'',prio:2,space:'',note:''};layer.undo=undo;
   $('#phrase').value='';$('#addnote').value='';
-  $('#last').innerHTML='<div class="last" role="status">'+ic('check','s')+'<span>Ajoutée : '+esc(p.title)+'</span><button class="btn" data-act="addundo">Annuler</button></div>';
-  addPreview();$('#phrase').focus();
+  $('#last').innerHTML='<div class="last" role="status">'+ic('check','s')+'<span>Ajoutée : '+esc(v.title)+'</span><button class="btn" data-act="addundo">Annuler</button></div>';
+  syncAdd();$('#phrase').focus();
 }
 function openActions(id){
   var t=tasks.get(id);if(!t)return;layer={type:'actions',id:id};
@@ -641,7 +663,7 @@ document.addEventListener('click',function(e){
     case 'add':openAdd();break;
     case 'close':closeLayer();break;
     case 'addgo':addGo();break;
-    case 'addundo':if(layer&&layer.undo){var u=layer.undo;delTask(u.id);layer.text=u.text;layer.undo=null;$('#phrase').value=u.text;$('#addnote').value=u.note;$('#last').innerHTML='';addPreview()}break;
+    case 'addundo':if(layer&&layer.undo){var u=layer.undo;delTask(u.id);layer.form.text=u.text;layer.form.note=u.note;layer.undo=null;$('#phrase').value=u.text;$('#addnote').value=u.note;$('#last').innerHTML='';syncAdd()}break;
     case 'a-done':if(layer){var x=tasks.get(layer.id);closeLayer();if(x)complete(x)}break;
     case 'a-snooze':if(layer){var y=tasks.get(layer.id);closeLayer();if(y)snooze(y)}break;
     case 'a-edit':if(layer){var z=layer.id;closeLayer();openEdit(z)}break;
