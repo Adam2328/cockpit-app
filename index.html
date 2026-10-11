@@ -1005,6 +1005,10 @@ document.addEventListener('visibilitychange',function(){
 });
 setInterval(function(){if(!document.hidden&&view==='today'&&!layer&&!drag)render()},60000); /* le repère « Maintenant » avance */
 start();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+if('serviceWorker' in navigator){
+  var hadSw=!!navigator.serviceWorker.controller,reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){if(hadSw&&!reloaded&&!layer&&!saving&&!lsGet(UNSYNCED)){reloaded=true;location.reload()}}); /* nouvelle version : on recharge une fois */
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
 })();
 </script>
