@@ -248,7 +248,7 @@ var I={
  trash:'<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
  moon:'<path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
  dawn:'<path d="M3 18h18M7 18a5 5 0 0110 0M12 6v3M5 10l2 2M19 10l-2 2"/>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',edit:'<path d="M4 20l1-4L16 5l3 3L8 19z"/>',
- undo:'<path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3"/>',search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',off:'<path d="M3 3l18 18M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 015-2.7M19 12.5a10 10 0 00-3-2.2M12 20h.01"/>'
+ undo:'<path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3"/>',search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',off:'<path d="M3 3l18 18M8.5 16.5a5 5 0 017 0M5 12.5a10 10 0 015-2.7M19 12.5a10 10 0 00-3-2.2M12 20h.01"/>'
 };
 var ic=function(n,c){return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+I[n]+'</svg>'};
 /* dates */
@@ -315,7 +315,7 @@ function serialize(d){
 function apply(d){
   if(Array.isArray(d.spaces)&&d.spaces.length)spaces=d.spaces;
   tasks=new Map();
-  (d.tasks||[]).forEach(function(x){tasks.set(x.id,Object.assign({pr:2,status:'todo',space:'perso',due:'',recur:'none',remind:'',note:'',subs:[],tags:[],early:0},x))});
+  (d.tasks||[]).forEach(function(x){tasks.set(x.id,Object.assign({pr:2,status:'todo',space:'perso',due:'',recur:'none',remind:'',note:'',subs:[],tags:[],early:0,place:''},x))});
   rollDays();loaded=true;
 }
 async function pull(){
@@ -399,6 +399,7 @@ function metaHtml(t,o){
   else if(t.recur&&t.recur!=='none')m+='<span class="it">'+ic('rep','s')+{daily:'chaque jour',weekly:'chaque semaine',monthly:'chaque mois'}[t.recur]+'</span>';
   if(t.status==='waiting')m+='<span class="it">'+ic('wait','s')+(t.due?'relance le '+esc(shortDate(t.due)):'en attente')+'</span>';
   if(o&&o.ago)m+='<span>'+esc(o.ago)+'</span>';
+  if(t.place)m+='<span class="it">'+ic('pin','s')+esc(t.place)+'</span>';
   if(t.subs&&t.subs.length)m+='<span class="it">'+ic('check','s')+t.subs.filter(function(x){return x.d}).length+'/'+t.subs.length+'</span>';
   if(t.tags&&t.tags.length)m+='<span class="tag">'+t.tags.map(function(x){return '@'+esc(x)}).join(' ')+'</span>';
   if(t.note)m+='<span class="it">'+ic('note','s')+'note</span>';
@@ -525,7 +526,7 @@ function matchTask(t){
   if(sq.space&&t.space!==sq.space)return false;
   if(sq.tag&&(t.tags||[]).indexOf(sq.tag)<0)return false;
   var q=sq.text.trim();if(!q)return true;
-  var hay=norm([t.title,t.note,spaceOf(t.space).name,(t.tags||[]).join(' '),(t.subs||[]).map(function(x){return x.t}).join(' ')].join(' '));
+  var hay=norm([t.title,t.note,t.place,spaceOf(t.space).name,(t.tags||[]).join(' '),(t.subs||[]).map(function(x){return x.t}).join(' ')].join(' '));
   return q.split(/\s+/).every(function(w){var n=norm(w);return !n||hay.indexOf(n)>=0});
 }
 function searchResults(){
@@ -581,6 +582,7 @@ function openAdd(prefill){
    '<span class="fl m">Rappel à une heure précise</span><div class="rem"><button class="sw" type="button" id="a-sw" role="switch" aria-checked="false" aria-label="Activer le rappel"></button><label class="vh" for="a-time">Heure</label><input id="a-time" class="tm m" type="time" value="09:00"></div>'+
    '<div class="qs" role="group" aria-label="Raccourcis rappel">'+q('rem','in1h','Dans 1 h','clock')+q('rem','eve','Ce soir','moon')+q('rem','morn','Demain 8 h','dawn')+'</div>'+
    '<span class="fl m">Répéter certains jours</span><div class="dows" id="a-dows" role="group" aria-label="Jours de répétition">'+dowBtns([],'adow')+'</div><div class="hint" id="a-dh"></div>'+
+   '<label class="fl m" for="a-place">Lieu</label><input id="a-place" class="in" style="width:100%" maxlength="120" autocomplete="off">'+
    '<span class="fl m">Prévenir aussi</span><div class="seg c3" role="group" id="a-early">'+[[0,'Non'],[60,'1 h avant'],[1440,'La veille']].map(function(x){return '<button class="btn sg" type="button" data-a="early" data-v="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>'+
    '<span class="fl m">Priorité</span><div class="seg c3" role="group" id="a-pr">'+[1,2,3].map(function(n){return '<button class="btn sg" type="button" data-a="prio" data-v="'+n+'">'+PRL[n]+'<small>'+PRF[n]+'</small></button>'}).join('')+'</div>'+
    '<div class="hint m" id="a-nf"></div>'+
@@ -663,10 +665,10 @@ function parsePhrase(text){
 }
 function addGo(){
   var f=layer.form,v=addVals();if(!v.title)return;
-  var id=addTask({title:v.title,space:v.space,pr:v.prio,due:v.due,remind:v.time&&v.due?v.due+'T'+v.time:'',status:'todo',note:f.note.trim(),recur:v.days.length?'days':'none',days:v.days,early:v.time?v.early:0,tags:v.tags,subs:[],created:Date.now(),doneAt:0});
+  var id=addTask({title:v.title,space:v.space,pr:v.prio,due:v.due,remind:v.time&&v.due?v.due+'T'+v.time:'',status:'todo',note:f.note.trim(),recur:v.days.length?'days':'none',days:v.days,early:v.time?v.early:0,tags:v.tags,subs:[],place:($('#a-place').value||'').trim(),created:Date.now(),doneAt:0});
   var undo={id:id,text:f.text,note:f.note};
   layer.form={text:'',manual:{},due:'',time:'',prio:2,space:'',note:'',days:[],early:0};layer.undo=undo;
-  $('#phrase').value='';$('#addnote').value='';
+  $('#phrase').value='';$('#addnote').value='';$('#a-place').value='';
   $('#last').innerHTML='<div class="last" role="status">'+ic('check','s')+'<span>Ajoutée : '+esc(v.title)+'</span><button class="btn" data-act="addundo">Annuler</button></div>';
   syncAdd();$('#phrase').focus();
 }
@@ -703,6 +705,7 @@ function openEdit(id){
    '<div class="qs" role="group" aria-label="Raccourcis échéance">'+[['Aujourd\'hui',T],['Demain',addDays(T,1)],['Lundi',mon],['+ 1 semaine',addDays(T,7)],['Sans date','']].map(function(x){return '<button class="btn q" type="button" data-due="'+x[1]+'" aria-pressed="'+((t.due||'')===x[1])+'">'+x[0]+'</button>'}).join('')+'</div>'+
    '<span class="fl m">Rappel</span><div class="rem"><button class="sw" type="button" id="f-sw" role="switch" aria-checked="'+!!t.remind+'" aria-label="Activer le rappel"></button><label class="vh" for="f-time">Heure du rappel</label><input id="f-time" class="tm m" type="time" value="'+tm+'"></div>'+
    '<div class="qs" role="group" aria-label="Raccourcis rappel"><button class="btn q" type="button" data-rem="in1h">'+ic('clock','s')+'Dans 1 h</button><button class="btn q" type="button" data-rem="eve">'+ic('moon','s')+'Ce soir</button><button class="btn q" type="button" data-rem="morn">'+ic('dawn','s')+'Demain 8 h</button></div>'+
+   '<label class="fl m" for="f-place">Lieu</label><div class="pw"><input id="f-place" class="in" value="'+esc(t.place||'')+'" maxlength="120" autocomplete="off"><button class="btn show" type="button" data-act="maps" aria-label="Ouvrir dans Maps">'+ic('pin','s')+' Maps</button></div>'+
    '<span class="fl m">Prévenir aussi</span>'+seg('early',[[0,'Non'],[60,'1 h avant'],[1440,'La veille']],t.early||0,'c3')+
    '<button class="btn q" type="button" data-act="gcal" style="margin-top:14px">'+ic('cal','s')+'Ajouter à Google Agenda</button>'+
    '<span class="fl m">Statut</span>'+seg('st',[['todo','À faire'],['waiting','En attente'],['done','Terminé']],t.status,'c3')+
@@ -739,7 +742,7 @@ function evtTimes(t){
 function gcal(){
   var t=layer&&layer.type==='edit'&&tasks.get(layer.id);if(!t)return;
   var ev=evtTimes(t),rr=rrule(t);
-  window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(t.title)+'&dates='+ev.s+'/'+ev.e+(t.note?'&details='+encodeURIComponent(t.note):'')+(rr?'&recur='+encodeURIComponent('RRULE:'+rr):''),'_blank','noopener');
+  window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(t.title)+'&dates='+ev.s+'/'+ev.e+(t.note?'&details='+encodeURIComponent(t.note):'')+(t.place?'&location='+encodeURIComponent(t.place):'')+(rr?'&recur='+encodeURIComponent('RRULE:'+rr):''),'_blank','noopener');
 }
 function downloadIcs(){
   var q=function(x){return String(x||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')};
@@ -749,6 +752,7 @@ function downloadIcs(){
     var ev=evtTimes(t),rr=rrule(t);n++;
     L.push('BEGIN:VEVENT','UID:'+t.id+'@fil','DTSTAMP:'+stamp,(ev.allDay?'DTSTART;VALUE=DATE:':'DTSTART:')+ev.s,(ev.allDay?'DTEND;VALUE=DATE:':'DTEND:')+ev.e,'SUMMARY:'+q(t.title));
     if(t.note)L.push('DESCRIPTION:'+q(t.note));
+    if(t.place)L.push('LOCATION:'+q(t.place));
     if(rr)L.push('RRULE:'+rr);
     if(!ev.allDay)L.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+q(t.title),'TRIGGER:PT0S','END:VALARM');
     L.push('END:VEVENT');
@@ -771,7 +775,7 @@ function commitEdit(){
   }
   $('#dows').hidden=rec!=='days';
   if(on){if(!due){due=(time>nowHM()?todayStr():addDays(todayStr(),1));$('#f-due').value=due}remind=due+'T'+time}
-  var st=formVal('st')||t.status,data={title:$('#f-title').value.trim()||t.title,space:$('#f-space').value,pr:+formVal('pr')||t.pr,due:due,remind:remind,recur:rec,days:days,note:$('#f-note').value.trim(),status:st,early:+formVal('early')||0,tags:parseTags($('#f-tags').value)};
+  var st=formVal('st')||t.status,data={title:$('#f-title').value.trim()||t.title,space:$('#f-space').value,pr:+formVal('pr')||t.pr,due:due,remind:remind,recur:rec,days:days,note:$('#f-note').value.trim(),status:st,early:+formVal('early')||0,tags:parseTags($('#f-tags').value),place:$('#f-place').value.trim()};
   if(st==='done'&&t.status!=='done')data.doneAt=Date.now();
   if(st!=='done'&&t.status==='done')data.doneAt=0;
   upd(t.id,data);
@@ -882,6 +886,7 @@ document.addEventListener('click',function(e){
     case 'sub-add':subAdd();break;
     case 'sub-tog':case 'sub-del':if(layer&&layer.type==='edit')subOp(a,+b.dataset.i);break;
     case 'gcal':gcal();break;
+    case 'maps':{var pl=($('#f-place').value||'').trim();if(pl)window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(pl),'_blank','noopener');break}
     case 'ics':downloadIcs();break;
     case 'pk-close':closePicker();break;
     case 'sq-space':pickSpace('Espace',sq.space,null,function(v){sq.space=v;render()},'Tous les espaces');break;
