@@ -71,9 +71,9 @@ button,input,textarea,select{font:inherit;color:inherit}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;padding:3px 0 14px;font-size:12.5px;color:var(--ink3)}
 .meta .sp{font-weight:500}
 .meta .it{display:inline-flex;align-items:center;gap:5px}
-.pr{margin:12px 0 0 6px;height:22px;min-width:28px;padding:0 6px;border-radius:6px;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
-.p1 .pr{background:var(--inv);color:var(--onv);font-weight:500}
-.p3 .pr{color:var(--ink3);border:1.5px dashed var(--rule2)}
+.pr{margin:12px 0 0 6px;height:22px;padding:0 8px;border-radius:11px;font-size:12px;font-weight:600;letter-spacing:.01em;display:inline-flex;align-items:center;justify-content:center}
+.p1 .pr{background:var(--inv);color:var(--onv)}
+.p3 .pr{color:var(--ink3);font-weight:500;border:1.5px dashed var(--rule2)}
 .now{position:relative;display:grid;grid-template-columns:48px 44px minmax(0,1fr);height:40px;padding:0 20px;align-items:center}
 .now::before{content:'';position:absolute;left:90px;top:0;bottom:0;width:1px;background:var(--rule)}
 .now .hr{padding:0;font-weight:500;color:var(--ink)}
@@ -188,7 +188,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .nt{border-top:1px solid var(--rule)}
 .nr{display:flex;align-items:center;justify-content:space-between;min-height:56px;border-bottom:1px solid var(--rule)}
 .nr .tmx{font-size:14px;color:var(--ink2)}
-.nr .pr{margin:0;height:24px;min-width:32px;font-size:12.5px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:0 7px}
+.nr .pr{margin:0;height:26px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;border-radius:13px;padding:0 12px}
 .pr.a{background:var(--inv);color:var(--onv);font-weight:500}.pr.b{border:1.5px solid var(--ink)}.pr.c{color:var(--ink3);border:1.5px dashed var(--rule2)}
 .snote{font-size:13.5px;line-height:1.45;color:var(--ink3);margin-top:12px}
 .ver{margin-top:36px;font-size:12px;color:var(--ink3)}
@@ -348,7 +348,7 @@ function rowHtml(t,o){
    '<div class="row fg p'+t.pr+'"><span class="hr m">'+esc(o.hour||'')+'</span>'+
    '<button class="btn node" data-act="done" data-id="'+t.id+'" aria-label="Terminer : '+esc(t.title)+'"><span class="dot"></span></button>'+
    '<div class="body" data-act="edit" data-id="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'+metaHtml(t,o)+'</div>'+
-   (t.pr!==2?'<span class="pr m">!'+t.pr+'</span>':'')+'</div></div>';
+   (t.pr!==2?'<span class="pr">'+PRL[t.pr]+'</span>':'')+'</div></div>';
 }
 var sec=function(label,n){return '<div class="sec m"><span>'+esc(label)+'</span><span>'+n+'</span></div>'};
 var rows=function(list,o){return list.map(function(t){return rowHtml(t,o&&o(t))}).join('')};
@@ -441,11 +441,12 @@ function vSettings(){
    '<div class="status m'+(offline?' err':'')+'"><i></i>'+(offline?'Hors ligne':'Connecté'+(ago!=null?' · synchro il y a '+ago+' min':''))+'</div>'+
    '<button class="btn test" data-act="test">'+ic('rep','s')+'Enregistrer et tester la connexion</button>'+
    '<span class="fl m" id="l-th">Thème</span><div class="tabs c3" style="margin:0" role="group" aria-labelledby="l-th">'+[['light','Clair','sun'],['dark','Sombre','moon'],['auto','Auto','']].map(function(x){return '<button class="btn tb" style="flex-direction:row;gap:8px;font-size:15px" data-theme="'+x[0]+'" aria-pressed="'+(th===x[0])+'">'+(x[2]?ic(x[2],'s'):'')+x[1]+'</button>'}).join('')+'</div>'+
-   '<span class="fl m">Notifications</span><div class="nt"><div class="nr"><span class="pr a m">!1</span><span class="tmx m">8h · 12h · 16h · 20h</span></div><div class="nr"><span class="pr b m">!2</span><span class="tmx m">8h · 20h</span></div><div class="nr"><span class="pr c m">!3</span><span class="tmx m">8h</span></div></div>'+
+   '<span class="fl m">Notifications</span><div class="nt"><div class="nr"><span class="pr a">Urgent</span><span class="tmx m">8h · 12h · 16h · 20h</span></div><div class="nr"><span class="pr b">Normal</span><span class="tmx m">8h · 20h</span></div><div class="nr"><span class="pr c">Faible</span><span class="tmx m">8h</span></div></div>'+
    '<p class="snote">Les rappels poussés (et ceux à heure précise) sont envoyés par le serveur via ntfy, toutes les 30 minutes environ.</p>'+
    '<div class="ver m">Fil · installée sur l\'écran d\'accueil</div></div>';
 }
 /* ---------- rendu principal ---------- */
+var PRL={1:'Urgent',2:'Normal',3:'Faible'},PRF={1:'4×/jour',2:'2×/jour',3:'1×/jour'};
 var NAV=[['today','Aujourd\'hui','today'],['upcoming','À venir','cal'],null,['spaces','Espaces','grid'],['done','Terminées','doneI']];
 function render(){
   var v=$('#view');
@@ -478,7 +479,7 @@ function openAdd(prefill){
    '<div class="qs" role="group" aria-label="Raccourcis jour">'+q('due',T,'Aujourd\'hui')+q('due',addDays(T,1),'Demain')+q('due',mon,'Lundi')+q('due',addDays(T,7),'+ 1 semaine')+q('due','','Sans date')+'</div>'+
    '<span class="fl m">Rappel à une heure précise</span><div class="rem"><button class="sw" type="button" id="a-sw" role="switch" aria-checked="false" aria-label="Activer le rappel"></button><label class="vh" for="a-time">Heure</label><input id="a-time" class="tm m" type="time" value="09:00"></div>'+
    '<div class="qs" role="group" aria-label="Raccourcis rappel">'+q('rem','in1h','Dans 1 h','clock')+q('rem','eve','Ce soir','moon')+q('rem','morn','Demain 8 h','dawn')+'</div>'+
-   '<span class="fl m">Priorité</span><div class="seg c3" role="group" id="a-pr">'+[[1,'Urgent'],[2,'Normal'],[3,'Faible']].map(function(x){return '<button class="btn sg" type="button" data-a="prio" data-v="'+x[0]+'"><span class="m">!'+x[0]+'</span><small>'+x[1]+'</small></button>'}).join('')+'</div>'+
+   '<span class="fl m">Priorité</span><div class="seg c3" role="group" id="a-pr">'+[1,2,3].map(function(n){return '<button class="btn sg" type="button" data-a="prio" data-v="'+n+'">'+PRL[n]+'<small>'+PRF[n]+'</small></button>'}).join('')+'</div>'+
    '<div class="hint m" id="a-nf"></div>'+
    '<span class="fl m">Espace</span><label class="field"><span class="sp" id="a-spc" style="flex:1;display:flex;align-items:center;gap:10px"><i class="sq" style="width:10px;height:10px"></i><select id="a-space" aria-label="Espace">'+spaces.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'}).join('')+'</select></span>'+ic('chev')+'</label>'+
    '<label class="fl m" for="addnote">Note · facultatif</label><textarea id="addnote" class="note" rows="2" style="min-height:64px"></textarea>'+
@@ -585,7 +586,7 @@ function openEdit(id){
   $('#layer').innerHTML='<div class="layer"><div class="page"><div class="pgw"><header class="ptop"><button class="btn back" data-act="close">'+ic('back')+esc({today:'Aujourd\'hui',upcoming:'À venir',spaces:'Espaces',done:'Terminées'}[view]||'Retour')+'</button><span class="saved m" id="saved">'+ic('check','s')+'Enregistré</span></header>'+
    '<form class="pbody" id="ef" onsubmit="return false"><label class="vh" for="f-title">Titre</label><textarea id="f-title" class="ftitle" rows="2">'+esc(t.title)+'</textarea>'+
    '<label class="fl m" for="f-note" style="margin-top:14px">Note</label><textarea id="f-note" class="note" style="min-height:72px" rows="2">'+esc(t.note||'')+'</textarea><span class="fl m">Espace</span><label class="field"><span class="sp" style="--h:'+hueOf(spaceOf(t.space))+';flex:1;display:flex;align-items:center;gap:10px"><i class="sq" style="width:10px;height:10px"></i><select id="f-space" aria-label="Espace">'+spaces.concat(spaces.some(function(s){return s.id===t.space})?[]:[spaceOf(t.space)]).map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===t.space?' selected':'')+'>'+esc(s.name)+'</option>'}).join('')+'</select></span>'+ic('chev')+'</label>'+
-   '<span class="fl m">Priorité</span>'+seg('pr',[[1,'<span class="m">!1</span><small>Urgent</small>'],[2,'<span class="m">!2</span><small>Normal</small>'],[3,'<span class="m">!3</span><small>Faible</small>']],t.pr,'c3')+
+   '<span class="fl m">Priorité</span>'+seg('pr',[[1,'Urgent<small>4×/jour</small>'],[2,'Normal<small>2×/jour</small>'],[3,'Faible<small>1×/jour</small>']],t.pr,'c3')+
    '<div class="hint m" id="nf">'+ic('bell','s')+'Notifs : '+NF[t.pr]+'</div>'+
    '<span class="fl m">Échéance</span><label class="field">'+ic('cal')+'<input type="date" id="f-due" value="'+esc(t.due||'')+'" aria-label="Échéance"></label>'+
    '<div class="qs" role="group" aria-label="Raccourcis échéance">'+[['Aujourd\'hui',T],['Demain',addDays(T,1)],['Lundi',mon],['+ 1 semaine',addDays(T,7)],['Sans date','']].map(function(x){return '<button class="btn q" type="button" data-due="'+x[1]+'" aria-pressed="'+((t.due||'')===x[1])+'">'+x[0]+'</button>'}).join('')+'</div>'+
