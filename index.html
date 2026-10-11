@@ -231,7 +231,7 @@ var DEFAULT_SPACES=[{id:'trainer',name:'trAIner',h:250},{id:'time2ai',name:'Time
 var HUE={trainer:250,time2ai:38,essec:155,stages:350,vigie:80,admin:205,perso:125,clara:300};
 var CFG_KEY='cockpit.cfg',CACHE_KEY='cockpit.cache',THEME_KEY='cockpit.theme',DEFAULT_REPO='Adam2328/cockpit';
 var tasks=new Map(),spaces=DEFAULT_SPACES.slice();
-var view='today',upTab='7',spId=null,spTab='todo',catchOpen=false,loaded=false,offline=false,layer=null;
+var view='today',upTab='7',spId=null,spTab='todo',catchOpen=true,loaded=false,offline=false,layer=null;
 var $=function(s){return document.querySelector(s)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
@@ -432,21 +432,23 @@ function vToday(){
   var late=todo.filter(function(t){return t.due&&t.due<T}).sort(function(a,b){return a.due.localeCompare(b.due)});
   var today=todo.filter(function(t){return t.due===T}).sort(sortRows);
   var tomorrow=todo.filter(function(t){return t.due===addDays(T,1)}).sort(sortRows);
-  var open=late.length+today.length;
+  var byD=function(a,b){return a.due.localeCompare(b.due)||sortRows(a,b)};
+  var week=todo.filter(function(t){return t.due&&dueDelta(t)>=2&&dueDelta(t)<=7}).sort(byD),later=todo.filter(function(t){return t.due&&dueDelta(t)>7}).sort(byD);
+  var none=todo.filter(function(t){return !t.due}).sort(sortRows),waitL=byWait().sort(function(a,b){return (a.due||'9').localeCompare(b.due||'9')});
   var seg=Math.round(dt/Math.max(1,dt+today.length)*9),bars='';
   for(var i=0;i<9;i++)bars+='<i class="'+(i<seg?'on':'')+'"></i>';
-  var cnt=!loaded?'Synchronisation…':open===0&&!late.length&&!today.length?'Rien à faire · '+dt+' faite'+(dt>1?'s':''):(today.length+' à faire · '+dt+' faite'+(dt>1?'s':''));
-  var h='<header class="hd"><div class="kick m">'+esc(fr(T,{weekday:'long',day:'numeric',month:'long'}))+'</div><h1 class="big">Aujourd\'hui</h1><div class="cnt m">'+cnt+'</div><div class="bars" aria-hidden="true">'+bars+'</div>'+
+  var cnt=!loaded?'Synchronisation…':todo.length+' rappel'+(todo.length>1?'s':'')+' · '+dt+' faite'+(dt>1?'s':'')+' aujourd\'hui';
+  var h='<header class="hd"><div class="kick m">'+esc(fr(T,{weekday:'long',day:'numeric',month:'long'}))+'</div><h1 class="big">Rappels</h1><div class="cnt m">'+cnt+'</div><div class="bars" aria-hidden="true">'+bars+'</div>'+
    '<button class="btn gear srch" data-go="search" aria-label="Rechercher">'+ic('search')+'</button><button class="btn gear" data-go="settings" aria-label="Réglages">'+ic('gear')+'</button></header>';
   if(offline)h+='<div class="banner" role="status">'+ic('off')+'<div><strong>Hors ligne.</strong> '+(lsGet(UNSYNCED)?'Tes changements partiront dès que le réseau revient.':'Tu vois les données du dernier chargement.')+'</div></div>';
   if(!loaded)return h+'<div class="prog" role="progressbar" aria-label="Synchronisation"><i></i></div>'+['a b','b a','a a','b b','a b','b a'].map(function(s){s=s.split(' ');return '<div class="sk"><b class="h"></b><span class="c"></span><div class="t"><b class="'+s[0]+'"></b><b class="'+s[1]+'"></b></div></div>'}).join('');
-  if(!late.length&&!today.length){
-    return h+'<div class="empty"><svg width="24" height="150" viewBox="0 0 24 150" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 0v120" stroke-width="1"/><circle cx="12" cy="16" r="7" fill="currentColor"/><circle cx="12" cy="46" r="7" fill="currentColor"/><circle cx="12" cy="76" r="7" fill="currentColor"/><circle cx="12" cy="136" r="7" stroke-dasharray="2.5 4"/></svg><h2>Tout est fait.</h2><p>'+dt+' tâche'+(dt>1?'s':'')+' terminée'+(dt>1?'s':'')+' aujourd\'hui.'+(tomorrow.length?' Demain, '+tomorrow.length+' chose'+(tomorrow.length>1?'s':'')+' t\'attend'+(tomorrow.length>1?'ent':'')+'.':'')+'</p>'+
-      (tomorrow.length?'<button class="btn ghost" data-view="upcoming">Voir demain</button>':'')+'</div>';
+  if(!todo.length&&!waitL.length){
+    return h+'<div class="empty"><svg width="24" height="150" viewBox="0 0 24 150" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 0v120" stroke-width="1"/><circle cx="12" cy="16" r="7" fill="currentColor"/><circle cx="12" cy="46" r="7" fill="currentColor"/><circle cx="12" cy="76" r="7" fill="currentColor"/><circle cx="12" cy="136" r="7" stroke-dasharray="2.5 4"/></svg><h2>Tout est fait.</h2><p>'+dt+' tâche'+(dt>1?'s':'')+' terminée'+(dt>1?'s':'')+' aujourd\'hui.'+'</p></div>';
   }
   if(late.length)h+='<div class="rat"><button class="btn tg" data-act="catch" aria-expanded="'+catchOpen+'">'+ic('chev','s chev'+(catchOpen?' open':''))+'À rattraper <span class="n m">'+late.length+'</span></button><button class="btn rp" data-act="replan">Tout replanifier</button></div>';
   if(catchOpen)h+=rows(late,function(t){return {hour:shortDate(t.due),ago:'depuis '+(-dueDelta(t))+' j'}});
   var untimed=today.filter(function(t){return !timeOf(t)}),timed=today.filter(timeOf),n=nowHM();
+  if(!today.length)h+=sec('Aujourd\'hui',0);
   if(today.length){
     h+=sec('À faire aujourd\'hui',today.length)+rows(untimed);
     var before=timed.filter(function(t){return timeOf(t)<=n}),after=timed.filter(function(t){return timeOf(t)>n});
@@ -455,6 +457,11 @@ function vToday(){
     h+=rows(after,function(t){return {hour:timeOf(t)}});
   }
   if(tomorrow.length)h+=sec('Demain · '+fr(addDays(T,1),{weekday:'long',day:'numeric'}),tomorrow.length)+rows(tomorrow,function(t){return {hour:timeOf(t)}});
+  var hr=function(t){return {hour:timeOf(t)||shortDate(t.due)}};
+  if(week.length)h+=sec('Cette semaine',week.length)+rows(week,hr);
+  if(later.length)h+=sec('Plus tard',later.length)+rows(later,function(t){return {hour:shortDate(t.due)}});
+  if(none.length)h+=sec('Sans date',none.length)+rows(none);
+  if(waitL.length)h+=sec('En attente',waitL.length)+rows(waitL,function(t){return {hour:t.due?shortDate(t.due):''}});
   return h;
 }
 function vUpcoming(){
@@ -508,7 +515,7 @@ function vDone(){
 }
 function vSettings(){
   var th=lsGet(THEME_KEY)||'auto',ago=lastSync?Math.max(0,Math.round((Date.now()-lastSync)/60000)):null;
-  return '<header class="ptop" style="position:sticky"><button class="btn back" data-view="today">'+ic('back')+'Aujourd\'hui</button></header><div style="padding:6px 20px 40px">'+
+  return '<header class="ptop" style="position:sticky"><button class="btn back" data-view="today">'+ic('back')+'Rappels</button></header><div style="padding:6px 20px 40px">'+
    '<h1 class="big" style="margin-top:6px">Réglages</h1>'+
    '<span class="fl m">Connexion</span><label class="vh" for="s-repo">Dépôt</label><input id="s-repo" class="in m" style="width:100%;font-size:14px;margin-bottom:8px" value="'+esc(cfg&&cfg.repo||DEFAULT_REPO)+'" autocapitalize="off" autocomplete="off">'+
    '<label class="vh" for="s-tok">Jeton de connexion</label><div class="pw"><input id="s-tok" class="in m" type="password" placeholder="'+(cfg&&cfg.token?'•••••••••••••••• (inchangé)':'github_pat_…')+'" autocomplete="off"><button class="btn show" data-act="showtok">Afficher</button></div>'+
@@ -548,7 +555,7 @@ function searchResults(){
 function vSearch(){
   var tags=[];tasks.forEach(function(t){(t.tags||[]).forEach(function(x){if(tags.indexOf(x)<0)tags.push(x)})});tags.sort();
   var chip=function(k,v,l,on){return '<button class="btn q" type="button" data-sq="'+k+':'+esc(v)+'" aria-pressed="'+on+'">'+l+'</button>'};
-  return '<header class="ptop" style="position:sticky"><button class="btn back" data-view="today">'+ic('back')+'Aujourd\'hui</button></header><div style="padding:6px 0 40px"><div style="padding:0 20px"><h1 class="big" style="margin-top:6px">Recherche</h1>'+
+  return '<header class="ptop" style="position:sticky"><button class="btn back" data-view="today">'+ic('back')+'Rappels</button></header><div style="padding:6px 0 40px"><div style="padding:0 20px"><h1 class="big" style="margin-top:6px">Recherche</h1>'+
    '<label class="vh" for="s-q">Rechercher</label><input id="s-q" class="in" style="width:100%;margin-top:16px" type="search" value="'+esc(sq.text)+'" autocomplete="off">'+
    '<span class="fl m" style="margin-top:20px">Priorité</span><div class="qrow">'+chip('pr',0,'Toutes',!sq.pr)+[1,2,3].map(function(n){return chip('pr',n,PRL[n],sq.pr===n)}).join('')+'</div>'+
    '<span class="fl m">Statut</span><div class="qrow">'+[['open','Ouvertes'],['done','Terminées'],['all','Toutes']].map(function(x){return chip('st',x[0],x[1],sq.st===x[0])}).join('')+'</div>'+
@@ -583,7 +590,7 @@ function vMSpace(){
 }
 /* ---------- rendu principal ---------- */
 var PRL={1:'Urgent',2:'Normal',3:'Faible'},PRF={1:'4×/jour',2:'2×/jour',3:'1×/jour'};
-var NAV=[['today','Aujourd\'hui','today'],['upcoming','À venir','cal'],null,['spaces','Espaces','grid'],['done','Terminées','doneI']];
+var NAV=[['today','Rappels','today'],['upcoming','À venir','cal'],null,['spaces','Espaces','grid'],['done','Terminées','doneI']];
 function render(){
   var v=$('#view');
   if(!cfg||!cfg.token){showSetup();return}
@@ -732,7 +739,7 @@ function openEdit(id){
   var t=tasks.get(id);if(!t)return;layer={type:'edit',id:id,arm:false};
   var NF={1:'8h · 12h · 16h · 20h',2:'8h · 20h',3:'8h'},tm=timeOf(t)||'09:00',T=todayStr();
   var mon=addDays(T,(8-parseISO(T).getDay())%7||7);
-  $('#layer').innerHTML='<div class="layer"><div class="page"><div class="pgw"><header class="ptop"><button class="btn back" data-act="close">'+ic('back')+esc({today:'Aujourd\'hui',upcoming:'À venir',spaces:'Espaces',done:'Terminées'}[view]||'Retour')+'</button><span class="saved m" id="saved">'+ic('check','s')+'Enregistré</span></header>'+
+  $('#layer').innerHTML='<div class="layer"><div class="page"><div class="pgw"><header class="ptop"><button class="btn back" data-act="close">'+ic('back')+esc({today:'Rappels',upcoming:'À venir',spaces:'Espaces',done:'Terminées'}[view]||'Retour')+'</button><span class="saved m" id="saved">'+ic('check','s')+'Enregistré</span></header>'+
    '<form class="pbody" id="ef" onsubmit="return false"><label class="vh" for="f-title">Titre</label><textarea id="f-title" class="ftitle" rows="2">'+esc(t.title)+'</textarea>'+
    '<label class="fl m" for="f-note" style="margin-top:14px">Note</label><textarea id="f-note" class="note" style="min-height:72px" rows="2">'+esc(t.note||'')+'</textarea><span class="fl m">Étapes</span><div id="subs">'+subsHtml(t)+'</div><div class="pw" style="margin-top:8px"><input id="sub-in" class="in" aria-label="Nouvelle étape" maxlength="120" autocomplete="off"><button class="btn show" type="button" data-act="sub-add">Ajouter</button></div><span class="fl m">Espace</span><button class="btn field" type="button" data-act="pick-space" data-t="f"><span class="sp" id="f-spc" style="--h:'+hueOf(spaceOf(t.space))+';flex:1;display:flex;align-items:center;gap:10px;text-align:left"><i class="sq" style="width:10px;height:10px"></i><span id="f-spn">'+esc(spaceOf(t.space).name)+'</span></span>'+ic('chev')+'</button><input type="hidden" id="f-space" value="'+esc(t.space)+'">'+
    '<label class="fl m" for="f-tags">Étiquettes</label><input id="f-tags" class="in" style="width:100%" value="'+esc((t.tags||[]).map(function(x){return '@'+x}).join(' '))+'" autocomplete="off" autocapitalize="off">'+
