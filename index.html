@@ -211,6 +211,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .srch{right:58px}
 .qrow{display:flex;flex-wrap:wrap;gap:8px}
 .tag{font-size:12.5px;color:var(--ink3)}
+.dn .ttl{font-weight:400;color:var(--ink2);text-decoration:line-through;text-decoration-thickness:1.5px;text-decoration-color:var(--ink3)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);width:min(calc(100% - 24px),calc(var(--col) - 24px));bottom:calc(100px + env(safe-area-inset-bottom,0px));min-height:56px;border-radius:16px;background:var(--inv);color:var(--onv);display:flex;align-items:center;gap:10px;padding:0 6px 0 16px;font-size:15px;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .toast span{flex:1;min-width:0}
 .toast .btn{color:var(--onv);font-weight:700;padding:0 14px;text-decoration:underline;text-underline-offset:3px}
@@ -515,7 +516,7 @@ function vManage(){
   var cnt=function(id){return Array.from(tasks.values()).filter(function(t){return t.space===id}).length};
   return '<header class="ptop" style="position:sticky"><button class="btn back" data-view="spaces">'+ic('back')+'Espaces</button></header><div style="padding:6px 20px 40px"><h1 class="big" style="margin-top:6px">Gérer les espaces</h1>'+
    '<div class="cnt m">'+spaces.length+' espaces · '+tasks.size+' tâches</div>'+
-   '<div class="nt" style="margin-top:20px">'+spaces.map(function(s){return '<button class="btn li srow" data-act="space-open" data-sid="'+esc(s.id)+'"><span class="sp" style="--h:'+hueOf(s)+';flex:1;display:flex;align-items:center;gap:12px"><i class="sq" style="width:10px;height:10px"></i><span style="color:var(--ink)">'+esc(s.name)+'</span></span><span class="m" style="color:var(--ink3);font-size:13px">'+cnt(s.id)+'</span>'+ic('chev','s')+'</button>'}).join('')+'</div>'+
+   '<div class="nt" style="margin-top:20px">'+spaces.map(function(s){return '<button class="btn li srow" data-mg="'+esc(s.id)+'"><span class="sp" style="--h:'+hueOf(s)+';flex:1;display:flex;align-items:center;gap:12px"><i class="sq" style="width:10px;height:10px"></i><span style="color:var(--ink)">'+esc(s.name)+'</span></span><span class="m" style="color:var(--ink3);font-size:13px">'+cnt(s.id)+'</span>'+ic('chev','s')+'</button>'}).join('')+'</div>'+
    '<form id="newsp"><label class="fl m" for="nsp">Nouvel espace</label><div class="pw"><input id="nsp" class="in" maxlength="30" autocomplete="off"><button class="btn show" type="submit">Ajouter</button></div></form></div>';
 }
 var sq={text:'',pr:0,st:'open',space:'',tag:''};
@@ -546,6 +547,31 @@ function vSearch(){
    (tags.length?'<span class="fl m">Étiquette</span><div class="qrow">'+tags.map(function(x){return chip('tag',x,'@'+esc(x),sq.tag===x)}).join('')+'</div>':'')+'</div>'+
    '<div id="sres" style="margin-top:22px">'+searchResults()+'</div></div>';
 }
+/* ---------- page d'un espace : ses tâches, sélection multiple ---------- */
+var mgSpace=null,mgSel=new Set();
+var mgTasks=function(){return Array.from(tasks.values()).filter(function(t){return t.space===mgSpace})};
+function selRow(t){
+  var on=mgSel.has(t.id);
+  return '<div class="row p'+t.pr+(t.status==='done'?' dn':'')+'"><span class="hr m">'+esc(t.due?shortDate(t.due):'')+'</span>'+
+   '<button class="btn node subck" data-act="msel" data-id="'+t.id+'" aria-pressed="'+on+'" aria-label="Sélectionner : '+esc(t.title)+'"><span class="dot">'+ic('check')+'</span></button>'+
+   '<div class="body" data-act="edit" data-id="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'+metaHtml(t,{})+'</div>'+
+   (t.pr!==2&&t.status!=='done'?'<span class="pr">'+PRL[t.pr]+'</span>':'')+'</div>';
+}
+function vMSpace(){
+  if(!spaces.some(function(x){return x.id===mgSpace})){view='manage';return vManage()}
+  var sp=spaceOf(mgSpace),all=mgTasks(),n=mgSel.size;
+  var open=all.filter(function(t){return t.status==='todo'}).sort(function(a,b){return score(b)-score(a)});
+  var wait=all.filter(function(t){return t.status==='waiting'}),done=all.filter(function(t){return t.status==='done'}).sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0)});
+  var h='<header class="ptop" style="position:sticky"><button class="btn back" data-view="manage">'+ic('back')+'Gérer les espaces</button></header>'+
+   '<header class="hd" style="padding-top:14px"><div class="kick m">Espace</div><h1 class="big sp" style="--h:'+hueOf(sp)+'">'+esc(sp.name)+'</h1><div class="cnt m">'+all.length+' tâche'+(all.length>1?'s':'')+' · '+open.length+' à faire</div>'+
+   '<button class="btn gear" data-act="space-open" data-sid="'+esc(sp.id)+'" aria-label="Renommer, déplacer tout ou supprimer l\'espace">'+ic('gear')+'</button></header>';
+  if(!all.length)return h+'<div class="empty"><p>Aucune tâche dans cet espace.</p></div>';
+  h+='<div style="padding:6px 20px 0;display:flex;gap:12px;align-items:center"><button class="btn show" type="button" data-act="msel-all">'+(n===all.length?'Tout désélectionner':'Tout sélectionner')+'</button>'+
+     '<span class="m" style="color:var(--ink3);font-size:13px">'+(n?n+' sélectionnée'+(n>1?'s':''):'Touche un rond pour choisir')+'</span></div>';
+  [['À faire',open],['En attente',wait],['Terminées',done]].forEach(function(g){if(g[1].length)h+=sec(g[0],g[1].length)+g[1].map(selRow).join('')});
+  if(n)h+='<div class="pbar"><button class="btn del" type="button" data-act="mdel" aria-label="Supprimer la sélection">'+ic('trash')+'</button><button class="btn fin" type="button" data-act="mmove">'+ic('grid')+'Déplacer ('+n+')</button></div>';
+  return h;
+}
 /* ---------- rendu principal ---------- */
 var PRL={1:'Urgent',2:'Normal',3:'Faible'},PRF={1:'4×/jour',2:'2×/jour',3:'1×/jour'};
 var NAV=[['today','Aujourd\'hui','today'],['upcoming','À venir','cal'],null,['spaces','Espaces','grid'],['done','Terminées','doneI']];
@@ -553,10 +579,10 @@ function render(){
   var v=$('#view');
   if(!cfg||!cfg.token){showSetup();return}
   rollDays();
-  var html={today:vToday,upcoming:vUpcoming,spaces:vSpaces,done:vDone,settings:vSettings,manage:vManage,search:vSearch}[view]();
+  var html={today:vToday,upcoming:vUpcoming,spaces:vSpaces,done:vDone,settings:vSettings,manage:vManage,mspace:vMSpace,search:vSearch}[view]();
   var y=window.scrollY;v.innerHTML=html;
-  var dock=$('#dock');dock.hidden=view==='settings';
-  dock.innerHTML=NAV.map(function(n){return n?'<button class="btn dk" data-view="'+n[0]+'"'+((view==='manage'?'spaces':view==='search'?'today':view)===n[0]?' aria-current="page"':'')+'>'+ic(n[2])+n[1]+'</button>':'<button class="btn plus" data-act="add" aria-label="Ajouter une tâche">'+ic('plus')+'</button>'}).join('');
+  var dock=$('#dock');dock.hidden=view==='settings'||view==='mspace';
+  dock.innerHTML=NAV.map(function(n){return n?'<button class="btn dk" data-view="'+n[0]+'"'+(((view==='manage'||view==='mspace')?'spaces':view==='search'?'today':view)===n[0]?' aria-current="page"':'')+'>'+ic(n[2])+n[1]+'</button>':'<button class="btn plus" data-act="add" aria-label="Ajouter une tâche">'+ic('plus')+'</button>'}).join('');
   window.scrollTo(0,y);
   if(layer&&layer.type==='edit'&&!tasks.has(layer.id))closeLayer();
 }
@@ -834,7 +860,7 @@ function moveTasks(from,to,label){
 }
 function deleteSpace(id,to){
   var sp=spaces.find(function(x){return x.id===id}),undoMove=to?moveTasks(id,to):function(){},old=spaces;
-  spaces=spaces.filter(function(x){return x.id!==id});if(spId===id)spId=null;render();pushSoon();
+  spaces=spaces.filter(function(x){return x.id!==id});if(spId===id)spId=null;if(view==='mspace'&&mgSpace===id){view='manage';mgSel=new Set()}render();pushSoon();
   toast('Espace « '+sp.name+' » supprimé',function(){spaces=old;undoMove();render();pushSoon()});
 }
 /* ---------- clics ---------- */
@@ -844,6 +870,7 @@ document.addEventListener('click',function(e){
   var id=b.dataset.id,t=id&&tasks.get(id),a=b.dataset.act;
   if(b.dataset.pk!==undefined){var pf=pickCb;closePicker();if(pf)pf(b.dataset.pk);return}
   if(b.dataset.view){view=b.dataset.view;closeLayer();render();window.scrollTo(0,0);return}
+  if(b.dataset.mg){mgSpace=b.dataset.mg;mgSel=new Set();view='mspace';render();window.scrollTo(0,0);return}
   if(b.dataset.go){view=b.dataset.go;render();window.scrollTo(0,0);if(view==='search'){var si=$('#s-q');if(si)si.focus()}return}
   if(b.dataset.sq){var sv=b.dataset.sq,si2=sv.indexOf(':'),sk=sv.slice(0,si2),vv=sv.slice(si2+1);sq[sk]=sk==='pr'?+vv:(sk==='tag'&&sq.tag===vv?'':vv);render();return}
   if(b.dataset.up){upTab=b.dataset.up;render();return}
@@ -897,6 +924,18 @@ document.addEventListener('click',function(e){
       });break}
     case 'a-move':if(layer){var mv=layer.id,mt=tasks.get(mv);closeLayer();if(mt)pickSpace('Déplacer vers…',mt.space,null,function(to){upd(mv,{space:to});toast('Déplacée vers '+spaceOf(to).name)})}break;
     case 'space-open':openSpaceSheet(b.dataset.sid);break;
+    case 'msel':if(id){if(mgSel.has(id))mgSel.delete(id);else mgSel.add(id);render()}break;
+    case 'msel-all':{var allIds=mgTasks().map(function(x){return x.id});mgSel=mgSel.size===allIds.length?new Set():new Set(allIds);render();break}
+    case 'mmove':if(mgSel.size){var cnt=mgSel.size;pickSpace('Déplacer '+cnt+' tâche'+(cnt>1?'s':'')+' vers…',null,mgSpace,function(to){
+      var ids=Array.from(mgSel),prev=ids.map(function(i){return tasks.get(i)}).filter(Boolean);
+      prev.forEach(function(t){tasks.set(t.id,Object.assign({},t,{space:to}))});mgSel=new Set();render();pushSoon();
+      toast(prev.length+' déplacée'+(prev.length>1?'s':'')+' vers '+spaceOf(to).name,function(){prev.forEach(function(t){tasks.set(t.id,t)});render();pushSoon()});
+    })}break;
+    case 'mdel':if(!mgSel.size)break;
+      if(!b.classList.contains('arm')){var lab2=b.innerHTML;b.classList.add('arm');b.innerHTML=ic('trash')+'Confirmer';setTimeout(function(){if(b.isConnected){b.classList.remove('arm');b.innerHTML=lab2}},4000);break}
+      var removed=Array.from(mgSel).map(function(i){return tasks.get(i)}).filter(Boolean);
+      removed.forEach(function(t){tasks.delete(t.id)});mgSel=new Set();render();pushSoon();
+      toast(removed.length+' supprimée'+(removed.length>1?'s':''),function(){removed.forEach(function(t){tasks.set(t.id,t)});render();pushSoon()});break;
     case 'sp-rename':{var nm=$('#sp-name').value.trim(),sid=layer&&layer.id;if(nm&&sid){spaces=spaces.map(function(x){return x.id===sid?Object.assign({},x,{name:nm}):x});closeLayer();render();pushSoon();toast('Renommé')}break}
     case 'sp-move':if(layer){var from=layer.id;pickSpace('Déplacer les tâches vers…',null,from,function(to){var u=moveTasks(from,to);closeLayer();toast('Tâches déplacées vers '+spaceOf(to).name,u)})}break;
     case 'sp-del':if(layer){var did2=layer.id,nn=layer.n;
