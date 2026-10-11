@@ -1,5 +1,5 @@
 // Réseau d'abord (les tâches viennent de l'API GitHub, jamais mises en cache ici), cache pour ouvrir hors ligne.
-const CACHE = "cockpit-v2";
+const CACHE = "cockpit-v3";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))));
 self.addEventListener("activate", (e) =>
